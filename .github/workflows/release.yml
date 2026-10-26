@@ -7,11 +7,10 @@ on:
 
 permissions:
   contents: write
-  packages: write
 
 jobs:
   binaries:
-    name: Build ${{ matrix.arch }} binary
+    name: Build ${{ matrix.goos }}/${{ matrix.goarch }} binary
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -27,26 +26,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.26.x'
-
-      - name: Build in container (includes libolm)
+      - name: Build in container (bundles libolm)
+        if: matrix.goos == 'linux'
         run: |
-          docker buildx build --platform linux/amd64 \
+          docker buildx build --platform linux/${{ matrix.goarch }} \
             --target binary \
             --output type=local,dest=/tmp/out \
-            . || true
-          # Fallback: cross-compile without E2EE for non-linux targets
-          if [ -f /tmp/out/matrix-kchat ] && [ "${{ matrix.goos }}" = "linux" ]; then
-            cp /tmp/out/matrix-kchat matrix-kchat-${{ matrix.goos }}-${{ matrix.goarch }}
-          else
-            CGO_ENABLED=0 go build -ldflags "-s -w \
-              -X main.Tag=${{ github.ref_name }} \
-              -X main.Commit=${{ github.sha }}" \
-              -o matrix-kchat-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/matrix-kchat
-          fi
+            .
+          cp /tmp/out/matrix-kchat matrix-kchat-${{ matrix.goos }}-${{ matrix.goarch }}
+
+      - name: Cross-compile (CGO disabled for non-linux targets)
+        if: matrix.goos != 'linux'
+        run: |
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
+            go build -ldflags "-s -w \
+            -X main.Tag=${{ github.ref_name }} \
+            -X main.Commit=${{ github.sha }}" \
+            -o matrix-kchat-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/matrix-kchat
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -55,26 +51,25 @@ jobs:
           path: matrix-kchat-${{ matrix.goos }}-${{ matrix.goarch }}
 
   release:
-    name: Create release
+    name: Create GitHub release
     needs: binaries
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
 
-      - name: Create release
-        env:
-          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+      - name: Checksums
         run: |
-          set -e
           for f in matrix-kchat-*; do sha256sum "$f" >> checksums.txt; done
-          curl -sf "$GITHUB_SERVER_URL/api/v1/repos/$GITHUB_REPOSITORY/releases" \
-            -H "Authorization: token $GITEA_TOKEN" \
-            -H 'Content-Type: application/json' \
-            -d "{\"tag_name\":\"${GITHUB_REF_NAME}\",\"name\":\"${GITHUB_REF_NAME}\",\"draft\":false,\"prerelease\":false}" > /tmp/release.json
-          RELEASE_ID=$(jq -r '.id' /tmp/release.json)
-          for f in matrix-kchat-* checksums.txt; do
-            URL="$GITHUB_SERVER_URL/api/v1/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=$f"
-            curl -sf "$URL" -H "Authorization: token $GITEA_TOKEN" -F "attachment=@$f"
-          done
+          cat checksums.txt
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            matrix-kchat-*
+            checksums.txt
+          generate_release_notes: true

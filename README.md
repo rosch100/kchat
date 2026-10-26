@@ -30,7 +30,7 @@ Derived from [aiku/mautrix-mattermost](https://github.com/aiku/mautrix-mattermos
 
 ## Setup with Beeper (bridge-manager)
 
-1. Build and install [bbctl](https://github.com/beeper/bridge-manager):
+1. Clone this repository and build and install [bbctl](https://github.com/beeper/bridge-manager):
 
    ```bash
    git clone https://github.com/beeper/bridge-manager.git
