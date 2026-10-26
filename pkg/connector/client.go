@@ -51,8 +51,12 @@ type KChatClient struct {
 
 	pollMu         sync.Mutex
 	pollWatermarks map[string]*channelWatermark
-	teamID         string
-	serverURL      string
+
+	readReceiptMu    sync.Mutex
+	readReceiptMarks map[string]map[string]time.Time
+	lastMemberPoll   time.Time
+	teamID           string
+	serverURL        string
 
 	stopOnce sync.Once
 	stopChan chan struct{}

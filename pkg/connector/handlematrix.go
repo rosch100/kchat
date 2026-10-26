@@ -218,13 +218,10 @@ func (m *KChatClient) HandleMatrixReadReceipt(ctx context.Context, msg *bridgev2
 		return bridgev2.ErrNotLoggedIn
 	}
 
-	channelID := ParsePortalID(msg.Portal.ID)
-	_, _, err := m.client.ViewChannel(ctx, m.userID, &model.ChannelView{
-		ChannelId: channelID,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to mark channel as viewed: %w", err)
-	}
+	// kChat has no API route to mark channels as read (the Mattermost
+	// /channels/members/{uid}/{cid}/view route does not exist). Read state
+	// is managed by kChat clients only; receipts flow kChat -> Matrix via
+	// the member last_viewed_at polling in the poller.
 	return nil
 }
 

@@ -8,11 +8,18 @@ Derived from [aiku/mautrix-mattermost](https://github.com/aiku/mautrix-mattermos
 
 - Bidirectional messaging: text, images, videos, audio, files
 - Reactions, edits, deletes (redactions), replies/threads
-- Typing indicators and read receipts
+- Typing indicators (kChat → Matrix via realtime socket)
+- Read receipts (kChat → Matrix via `last_viewed_at` polling; kChat has no
+  mark-read API, so receipts are one-way)
 - Rich formatting: Matrix HTML ↔ kChat markdown
-- Direct messages and channel portals
+- Direct messages and channel portals; start DMs from Beeper via the
+  `pm <kChat-username>` command or the provisioning API
+- Message transport: per-5 s channel post polling (kChat's server-side
+  broadcast does not reach third-party sockets) plus realtime socket for
+  typing/presence
 - Message backfill on first sync
-- Login via kChat personal access token or username/password
+- Login via kChat personal access token (created in the Infomaniak Manager
+  with the kChat scope; kChat has no password login route)
 - bridgev2 native: appservice websockets, E2EE support, double puppeting
 
 ## Requirements
