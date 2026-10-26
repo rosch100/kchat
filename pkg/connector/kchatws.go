@@ -133,7 +133,12 @@ func (p *pusherSocket) subscribeAfterConnect() {
 		}
 	}
 	for _, channel := range p.pendingChannel {
-		p.subscribe(channel)
+		if err := p.subscribe(channel); err != nil {
+			// Presence channels may be denied by kChat's broadcasting policy;
+			// message events arrive on the team channel, so this is not fatal.
+			p.log.Warn().Err(err).Str("channel", channel).Msg("Channel subscription failed")
+			continue
+		}
 	}
 	p.subscribed = true
 	p.log.Info().Strs("channels", p.pendingChannel).Msg("Subscribed to kChat realtime channels")
@@ -150,11 +155,10 @@ func (p *pusherSocket) setPendingChannels(teamID, userID string) {
 
 // subscribe exchanges socket_id and channel_name for a signed subscription
 // at the kChat broadcasting endpoint, then subscribes on the socket.
-func (p *pusherSocket) subscribe(channel string) {
+func (p *pusherSocket) subscribe(channel string) error {
 	auth, channelData, err := p.authorizeChannel(channel)
 	if err != nil {
-		p.log.Error().Err(err).Str("channel", channel).Msg("Channel authorization failed")
-		return
+		return err
 	}
 	subData := map[string]any{
 		"channel": channel,
@@ -165,7 +169,9 @@ func (p *pusherSocket) subscribe(channel string) {
 	}
 	if err := p.writeJSON(map[string]any{"event": "pusher:subscribe", "data": subData}); err != nil {
 		p.log.Error().Err(err).Str("channel", channel).Msg("Failed to send subscription")
+		return err
 	}
+	return nil
 }
 
 // authorizeChannel requests the signed auth string for a channel.
