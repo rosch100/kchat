@@ -70,10 +70,16 @@ func (m *KChatClient) parsePostedEvent(evt *model.WebSocketEvent) (*model.Post, 
 		return nil, fmt.Errorf("failed to unmarshal post: %w", err)
 	}
 
-	// Echo prevention: skip own posts.
-	if post.UserId == m.userID {
+	// Echo prevention: skip posts sent by this bridge (tracked by post ID,
+	// covers cases where kChat strips unknown props like mx_txn).
+	if m.seenEcho(echoKindPost, post.Id) {
 		return nil, nil
 	}
+
+	// Note: posts from the logged-in user are NOT skipped — the user may
+	// write from kChat directly and expects those in Matrix. Bridge-sent
+	// echoes are removed via the mx_txn transaction ID (set on send) or the
+	// sent-post tracker above.
 
 	// Echo prevention: skip non-default post types (system messages).
 	if post.Type != "" && post.Type != model.PostTypeDefault {
@@ -117,7 +123,9 @@ func (m *KChatClient) parsePostEditedEvent(evt *model.WebSocketEvent) (*model.Po
 		return nil, fmt.Errorf("failed to unmarshal edited post: %w", err)
 	}
 
-	if post.UserId == m.userID {
+	// Echo prevention: skip edits performed by this bridge. Edits from kChat
+	// (even of bridge-sent messages) are relayed; they are idempotent.
+	if m.seenEcho(echoKindEdit, post.Id) {
 		return nil, nil
 	}
 
@@ -158,7 +166,8 @@ func (m *KChatClient) parsePostDeletedEvent(evt *model.WebSocketEvent) (*model.P
 		return nil, fmt.Errorf("failed to unmarshal deleted post: %w", err)
 	}
 
-	if post.UserId == m.userID {
+	// Echo prevention: skip deletes performed by this bridge.
+	if m.seenEcho(echoKindDelete, post.Id) {
 		return nil, nil
 	}
 
@@ -198,8 +207,9 @@ func (m *KChatClient) parseReactionEvent(evt *model.WebSocketEvent) (*model.Reac
 		return nil, fmt.Errorf("failed to unmarshal reaction: %w", err)
 	}
 
-	// Echo prevention: skip own reactions.
-	if reaction.UserId == m.userID {
+	// Echo prevention: skip reactions added/removed by this bridge.
+	if m.seenEcho(echoKindReaction, reaction.PostId+":"+reaction.EmojiName+":"+reaction.UserId) ||
+		m.seenEcho(echoKindReactionRm, reaction.PostId+":"+reaction.EmojiName+":"+reaction.UserId) {
 		return nil, nil
 	}
 
@@ -264,6 +274,10 @@ func (m *KChatClient) handlePosted(evt *model.WebSocketEvent) {
 
 	ts := time.UnixMilli(post.CreateAt)
 
+	// If the post carries the mx_txn prop set by this bridge on send, use it
+	// so bridgev2 matches the remote echo against the outgoing transaction.
+	txnID, _ := post.Props["mx_txn"].(string)
+
 	m.eventSender.QueueRemoteEvent(m.userLogin, &simplevent.Message[*model.Post]{
 		EventMeta: simplevent.EventMeta{
 			Type: bridgev2.RemoteEventMessage,
@@ -275,8 +289,9 @@ func (m *KChatClient) handlePosted(evt *model.WebSocketEvent) {
 			Timestamp:    ts,
 			CreatePortal: true,
 		},
-		ID:   MakeMessageID(post.Id),
-		Data: post,
+		TransactionID: networkid.TransactionID(txnID),
+		ID:            MakeMessageID(post.Id),
+		Data:          post,
 		ConvertMessageFunc: func(ctx context.Context, portal *bridgev2.Portal, intent bridgev2.MatrixAPI, data *model.Post) (*bridgev2.ConvertedMessage, error) {
 			return m.convertPostToMatrix(data), nil
 		},

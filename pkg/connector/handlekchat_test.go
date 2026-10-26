@@ -384,13 +384,17 @@ func TestHandleEvent_Dispatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			mock.Reset()
 			evt := newWebSocketEvent(tt.eventType, "ch1", tt.data)
 			mc.handleEvent(evt)
-			// Echo-filtered events should not queue anything.
-			if len(mock.Events()) != 0 {
-				t.Errorf("expected 0 events (echo-filtered), got %d", len(mock.Events()))
+			// Own-user events are relayed now; only typing is echo-filtered.
+			// channel_viewed/unknown_type queue nothing in this scenario.
+			expected := 1
+			if tt.name == "typing" || tt.name == "channel_viewed" || tt.name == "unknown_type" {
+				expected = 0
+			}
+			if len(mock.Events()) != expected {
+				t.Errorf("expected %d events, got %d", expected, len(mock.Events()))
 			}
 		})
 	}
@@ -414,8 +418,28 @@ func TestHandlePosted_EchoPrevention_OwnPost(t *testing.T) {
 
 	mc.handlePosted(evt)
 
+	if len(mock.Events()) != 1 {
+		t.Errorf("expected 1 event (own posts from kChat are relayed), got %d", len(mock.Events()))
+	}
+}
+
+func TestHandlePosted_EchoPrevention_BridgeSent(t *testing.T) {
+	t.Parallel()
+	mc := newFullTestClient("http://localhost")
+	mock := testMock(mc)
+	postJSON, _ := json.Marshal(&model.Post{
+		Id: "p1", UserId: "my-user-id", ChannelId: "ch1", Message: "hello",
+	})
+	evt := newWebSocketEvent(model.WebsocketEventPosted, "ch1", map[string]any{
+		"post":        string(postJSON),
+		"sender_name": "@myuser",
+	})
+	mc.rememberEcho(echoKindPost, "p1")
+
+	mc.handlePosted(evt)
+
 	if len(mock.Events()) != 0 {
-		t.Errorf("expected 0 events (own post filtered), got %d", len(mock.Events()))
+		t.Errorf("expected 0 events (bridge-sent echo dropped), got %d", len(mock.Events()))
 	}
 }
 
@@ -553,8 +577,27 @@ func TestHandlePostEdited_EchoPrevention(t *testing.T) {
 
 	mc.handlePostEdited(evt)
 
+	if len(mock.Events()) != 1 {
+		t.Errorf("expected 1 event (own edits from kChat are relayed), got %d", len(mock.Events()))
+	}
+}
+
+func TestHandlePostEdited_EchoPrevention_BridgeSent(t *testing.T) {
+	t.Parallel()
+	mc := newFullTestClient("http://localhost")
+	mock := testMock(mc)
+	postJSON, _ := json.Marshal(&model.Post{
+		Id: "p1", UserId: "my-user-id", ChannelId: "ch1", Message: "edited",
+	})
+	evt := newWebSocketEvent(model.WebsocketEventPostEdited, "ch1", map[string]any{
+		"post": string(postJSON),
+	})
+	mc.rememberEcho(echoKindEdit, "p1")
+
+	mc.handlePostEdited(evt)
+
 	if len(mock.Events()) != 0 {
-		t.Errorf("expected 0 events (own user echo prevention), got %d", len(mock.Events()))
+		t.Errorf("expected 0 events (bridge-sent edit echo dropped), got %d", len(mock.Events()))
 	}
 }
 
@@ -654,8 +697,27 @@ func TestHandlePostDeleted_EchoPrevention(t *testing.T) {
 
 	mc.handlePostDeleted(evt)
 
+	if len(mock.Events()) != 1 {
+		t.Errorf("expected 1 event (own deletes from kChat are relayed), got %d", len(mock.Events()))
+	}
+}
+
+func TestHandlePostDeleted_EchoPrevention_BridgeSent(t *testing.T) {
+	t.Parallel()
+	mc := newFullTestClient("http://localhost")
+	mock := testMock(mc)
+	postJSON, _ := json.Marshal(&model.Post{
+		Id: "p1", UserId: "my-user-id", ChannelId: "ch1", Message: "deleted",
+	})
+	evt := newWebSocketEvent(model.WebsocketEventPostDeleted, "ch1", map[string]any{
+		"post": string(postJSON),
+	})
+	mc.rememberEcho(echoKindDelete, "p1")
+
+	mc.handlePostDeleted(evt)
+
 	if len(mock.Events()) != 0 {
-		t.Errorf("expected 0 events (own user echo prevention), got %d", len(mock.Events()))
+		t.Errorf("expected 0 events (bridge-sent delete echo dropped), got %d", len(mock.Events()))
 	}
 }
 
@@ -835,6 +897,7 @@ func TestHandleReactionAdded_EchoPrevention(t *testing.T) {
 	reactionJSON, _ := json.Marshal(&model.Reaction{
 		UserId: "my-user-id", PostId: "p1", EmojiName: "+1",
 	})
+	mc.rememberEcho(echoKindReaction, "p1:+1:my-user-id")
 	evt := newWebSocketEvent(model.WebsocketEventReactionAdded, "ch1", map[string]any{
 		"reaction": string(reactionJSON),
 	})
@@ -842,7 +905,7 @@ func TestHandleReactionAdded_EchoPrevention(t *testing.T) {
 	mc.handleReactionAdded(evt)
 
 	if len(mock.Events()) != 0 {
-		t.Errorf("expected 0 events (own user echo prevention), got %d", len(mock.Events()))
+		t.Errorf("expected 0 events (bridge echo prevention), got %d", len(mock.Events()))
 	}
 }
 
@@ -878,11 +941,12 @@ func TestHandleReactionRemoved_EchoPrevention(t *testing.T) {
 	evt := newWebSocketEvent(model.WebsocketEventReactionRemoved, "ch1", map[string]any{
 		"reaction": string(reactionJSON),
 	})
+	mc.rememberEcho(echoKindReactionRm, "p1:heart:my-user-id")
 
 	mc.handleReactionRemoved(evt)
 
 	if len(mock.Events()) != 0 {
-		t.Errorf("expected 0 events (own user echo prevention), got %d", len(mock.Events()))
+		t.Errorf("expected 0 events (bridge echo prevention), got %d", len(mock.Events()))
 	}
 }
 
@@ -1213,6 +1277,7 @@ func TestParseReactionEvent_Valid(t *testing.T) {
 func TestParseReactionEvent_EchoPrevention(t *testing.T) {
 	t.Parallel()
 	mc := newFullTestClient("http://localhost")
+	mc.rememberEcho(echoKindReaction, "p1:+1:my-user-id")
 	reactionJSON, _ := json.Marshal(&model.Reaction{
 		UserId: "my-user-id", PostId: "p1", EmojiName: "+1",
 	})
@@ -1225,7 +1290,7 @@ func TestParseReactionEvent_EchoPrevention(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if reaction != nil {
-		t.Error("expected nil reaction (own user echo prevention)")
+		t.Error("expected nil reaction (bridge echo prevention)")
 	}
 }
 

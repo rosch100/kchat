@@ -349,7 +349,7 @@ func newFullTestClient(serverURL string) *KChatClient {
 		connector:   connector,
 		client:      client,
 		eventSender: &mockEventSender{},
-		userLogin:  &bridgev2.UserLogin{UserLogin: &database.UserLogin{ID: "test-login"}},
+		userLogin:   &bridgev2.UserLogin{UserLogin: &database.UserLogin{ID: "test-login"}},
 		userID:      "my-user-id",
 		teamID:      "my-team-id",
 		serverURL:   serverURL,
@@ -376,7 +376,7 @@ func newNotLoggedInClient() *KChatClient {
 	return &KChatClient{
 		connector:   connector,
 		eventSender: &mockEventSender{},
-		userLogin:  &bridgev2.UserLogin{UserLogin: &database.UserLogin{ID: "test-login"}},
+		userLogin:   &bridgev2.UserLogin{UserLogin: &database.UserLogin{ID: "test-login"}},
 		userID:      "my-user-id",
 		stopChan:    make(chan struct{}),
 		log:         log,

@@ -245,6 +245,7 @@ func TestHandleMatrixMessage_Text(t *testing.T) {
 
 	msg := &bridgev2.MatrixMessage{
 		MatrixEventBase: bridgev2.MatrixEventBase[*event.MessageEventContent]{
+			Event:   &event.Event{},
 			Portal:  makeTestPortal("test-channel"),
 			Content: &event.MessageEventContent{MsgType: event.MsgText, Body: "Hello"},
 		},
@@ -275,6 +276,7 @@ func TestHandleMatrixMessage_Emote(t *testing.T) {
 
 	msg := &bridgev2.MatrixMessage{
 		MatrixEventBase: bridgev2.MatrixEventBase[*event.MessageEventContent]{
+			Event:   &event.Event{},
 			Portal:  makeTestPortal("test-channel"),
 			Content: &event.MessageEventContent{MsgType: event.MsgEmote, Body: "waves"},
 		},
@@ -309,6 +311,7 @@ func TestHandleMatrixMessage_Notice(t *testing.T) {
 
 	msg := &bridgev2.MatrixMessage{
 		MatrixEventBase: bridgev2.MatrixEventBase[*event.MessageEventContent]{
+			Event:   &event.Event{},
 			Portal:  makeTestPortal("test-channel"),
 			Content: &event.MessageEventContent{MsgType: event.MsgNotice, Body: "Notice message"},
 		},
@@ -330,6 +333,7 @@ func TestHandleMatrixMessage_WithReply(t *testing.T) {
 
 	msg := &bridgev2.MatrixMessage{
 		MatrixEventBase: bridgev2.MatrixEventBase[*event.MessageEventContent]{
+			Event:   &event.Event{},
 			Portal:  makeTestPortal("test-channel"),
 			Content: &event.MessageEventContent{MsgType: event.MsgText, Body: "Reply text"},
 		},
@@ -365,6 +369,7 @@ func TestHandleMatrixMessage_UnsupportedType(t *testing.T) {
 
 	msg := &bridgev2.MatrixMessage{
 		MatrixEventBase: bridgev2.MatrixEventBase[*event.MessageEventContent]{
+			Event:   &event.Event{},
 			Portal:  makeTestPortal("test-channel"),
 			Content: &event.MessageEventContent{MsgType: event.MessageType("m.custom"), Body: "custom"},
 		},
@@ -389,6 +394,7 @@ func TestHandleMatrixMessage_APIError(t *testing.T) {
 
 	msg := &bridgev2.MatrixMessage{
 		MatrixEventBase: bridgev2.MatrixEventBase[*event.MessageEventContent]{
+			Event:   &event.Event{},
 			Portal:  makeTestPortal("test-channel"),
 			Content: &event.MessageEventContent{MsgType: event.MsgText, Body: "Hello"},
 		},
@@ -408,6 +414,7 @@ func TestHandleMatrixMessage_NotLoggedIn(t *testing.T) {
 
 	msg := &bridgev2.MatrixMessage{
 		MatrixEventBase: bridgev2.MatrixEventBase[*event.MessageEventContent]{
+			Event:   &event.Event{},
 			Portal:  makeTestPortal("test-channel"),
 			Content: &event.MessageEventContent{MsgType: event.MsgText, Body: "Hello"},
 		},
@@ -430,6 +437,7 @@ func TestHandleMatrixEdit_Success(t *testing.T) {
 
 	msg := &bridgev2.MatrixEdit{
 		MatrixEventBase: bridgev2.MatrixEventBase[*event.MessageEventContent]{
+			Event:   &event.Event{},
 			Portal:  makeTestPortal("test-channel"),
 			Content: &event.MessageEventContent{MsgType: event.MsgText, Body: "edited"},
 		},
@@ -455,6 +463,7 @@ func TestHandleMatrixEdit_APIError(t *testing.T) {
 
 	msg := &bridgev2.MatrixEdit{
 		MatrixEventBase: bridgev2.MatrixEventBase[*event.MessageEventContent]{
+			Event:   &event.Event{},
 			Portal:  makeTestPortal("test-channel"),
 			Content: &event.MessageEventContent{MsgType: event.MsgText, Body: "edited"},
 		},
@@ -475,6 +484,7 @@ func TestHandleMatrixEdit_NotLoggedIn(t *testing.T) {
 
 	msg := &bridgev2.MatrixEdit{
 		MatrixEventBase: bridgev2.MatrixEventBase[*event.MessageEventContent]{
+			Event:   &event.Event{},
 			Portal:  makeTestPortal("test-channel"),
 			Content: &event.MessageEventContent{MsgType: event.MsgText, Body: "edited"},
 		},
@@ -498,6 +508,7 @@ func TestHandleMatrixMessageRemove_Success(t *testing.T) {
 
 	msg := &bridgev2.MatrixMessageRemove{
 		MatrixEventBase: bridgev2.MatrixEventBase[*event.RedactionEventContent]{
+			Event:  &event.Event{},
 			Portal: makeTestPortal("test-channel"),
 		},
 		TargetMessage: &database.Message{ID: MakeMessageID("post-to-delete")},
@@ -522,6 +533,7 @@ func TestHandleMatrixMessageRemove_APIError(t *testing.T) {
 
 	msg := &bridgev2.MatrixMessageRemove{
 		MatrixEventBase: bridgev2.MatrixEventBase[*event.RedactionEventContent]{
+			Event:  &event.Event{},
 			Portal: makeTestPortal("test-channel"),
 		},
 		TargetMessage: &database.Message{ID: MakeMessageID("post-to-delete")},
@@ -541,6 +553,7 @@ func TestHandleMatrixMessageRemove_NotLoggedIn(t *testing.T) {
 
 	msg := &bridgev2.MatrixMessageRemove{
 		MatrixEventBase: bridgev2.MatrixEventBase[*event.RedactionEventContent]{
+			Event:  &event.Event{},
 			Portal: makeTestPortal("test-channel"),
 		},
 		TargetMessage: &database.Message{ID: MakeMessageID("post-to-delete")},
@@ -563,6 +576,7 @@ func TestPreHandleMatrixReaction(t *testing.T) {
 
 	msg := &bridgev2.MatrixReaction{
 		MatrixEventBase: bridgev2.MatrixEventBase[*event.ReactionEventContent]{
+			Event:   &event.Event{},
 			Portal:  makeTestPortal("test-channel"),
 			Content: &event.ReactionEventContent{RelatesTo: event.RelatesTo{Key: "\U0001f44d"}},
 		},
@@ -592,6 +606,7 @@ func TestHandleMatrixReaction_Success(t *testing.T) {
 
 	msg := &bridgev2.MatrixReaction{
 		MatrixEventBase: bridgev2.MatrixEventBase[*event.ReactionEventContent]{
+			Event:   &event.Event{},
 			Portal:  makeTestPortal("test-channel"),
 			Content: &event.ReactionEventContent{RelatesTo: event.RelatesTo{Key: "\U0001f44d"}},
 		},
@@ -626,6 +641,7 @@ func TestHandleMatrixReaction_APIError(t *testing.T) {
 
 	msg := &bridgev2.MatrixReaction{
 		MatrixEventBase: bridgev2.MatrixEventBase[*event.ReactionEventContent]{
+			Event:   &event.Event{},
 			Portal:  makeTestPortal("test-channel"),
 			Content: &event.ReactionEventContent{RelatesTo: event.RelatesTo{Key: "\U0001f44d"}},
 		},
@@ -649,6 +665,7 @@ func TestHandleMatrixReaction_NotLoggedIn(t *testing.T) {
 
 	msg := &bridgev2.MatrixReaction{
 		MatrixEventBase: bridgev2.MatrixEventBase[*event.ReactionEventContent]{
+			Event:   &event.Event{},
 			Portal:  makeTestPortal("test-channel"),
 			Content: &event.ReactionEventContent{RelatesTo: event.RelatesTo{Key: "\U0001f44d"}},
 		},
@@ -675,6 +692,7 @@ func TestHandleMatrixReactionRemove_Success(t *testing.T) {
 
 	msg := &bridgev2.MatrixReactionRemove{
 		MatrixEventBase: bridgev2.MatrixEventBase[*event.RedactionEventContent]{
+			Event:  &event.Event{},
 			Portal: makeTestPortal("test-channel"),
 		},
 		TargetReaction: &database.Reaction{
@@ -702,6 +720,7 @@ func TestHandleMatrixReactionRemove_APIError(t *testing.T) {
 
 	msg := &bridgev2.MatrixReactionRemove{
 		MatrixEventBase: bridgev2.MatrixEventBase[*event.RedactionEventContent]{
+			Event:  &event.Event{},
 			Portal: makeTestPortal("test-channel"),
 		},
 		TargetReaction: &database.Reaction{
@@ -724,6 +743,7 @@ func TestHandleMatrixReactionRemove_NotLoggedIn(t *testing.T) {
 
 	msg := &bridgev2.MatrixReactionRemove{
 		MatrixEventBase: bridgev2.MatrixEventBase[*event.RedactionEventContent]{
+			Event:  &event.Event{},
 			Portal: makeTestPortal("test-channel"),
 		},
 		TargetReaction: &database.Reaction{
@@ -916,6 +936,7 @@ func TestHandleMatrixMessage_EmptyBody(t *testing.T) {
 
 	msg := &bridgev2.MatrixMessage{
 		MatrixEventBase: bridgev2.MatrixEventBase[*event.MessageEventContent]{
+			Event:   &event.Event{},
 			Portal:  makeTestPortal("test-channel"),
 			Content: &event.MessageEventContent{MsgType: event.MsgText, Body: ""},
 		},

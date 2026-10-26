@@ -46,6 +46,7 @@ type KChatClient struct {
 
 	client    *model.Client4
 	wsSocket  *pusherSocket
+	echo      *echoTracker
 	userID    string
 	teamID    string
 	serverURL string
