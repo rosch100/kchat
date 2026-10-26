@@ -21,13 +21,13 @@ jobs:
         include:
           - goos: linux
             goarch: amd64
-            runner: ubuntu-latest
+            runner: ubuntu-24.04
           - goos: linux
             goarch: arm64
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -49,7 +49,7 @@ jobs:
   release:
     name: Create GitHub release
     needs: binaries
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
@@ -77,7 +77,7 @@ jobs:
       matrix:
         include:
           - goarch: amd64
-            runner: ubuntu-latest
+            runner: ubuntu-24.04
           - goarch: arm64
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
@@ -85,7 +85,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -130,7 +130,7 @@ jobs:
   docker-merge:
     name: Merge Docker manifest
     needs: docker
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       packages: write
     steps:
@@ -155,18 +155,18 @@ jobs:
         working-directory: /tmp/digests
         run: |
           REF="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
-          DIGESTS=""
+          DIGESTS=()
           for f in *; do
-            D=$(cat "$f" | tr -d '[:space:]')
-            D=${D#sha256:}
-            DIGESTS="$DIGESTS $REF@sha256:$D"
+            D=$(tr -d '[:space:]' < "$f")
+            D="${D#sha256:}"
+            DIGESTS+=("$REF@sha256:$D")
           done
-          echo "manifest sources:$DIGESTS"
+          echo "manifest sources:${DIGESTS[*]}"
           VERSION="${{ github.ref_name }}"
           MINOR=$(echo "$VERSION" | sed -n "s/^v\\([0-9]*\\.[0-9]*\\)\\..*/\\1/p")
-          docker manifest create "$REF:$VERSION" $DIGESTS
-          docker manifest create "$REF:$MINOR" $DIGESTS
-          docker manifest create "$REF:latest" $DIGESTS
+          docker manifest create "$REF:$VERSION" "${DIGESTS[@]}"
+          docker manifest create "$REF:$MINOR" "${DIGESTS[@]}"
+          docker manifest create "$REF:latest" "${DIGESTS[@]}"
           docker manifest push "$REF:$VERSION"
           docker manifest push "$REF:$MINOR"
           docker manifest push "$REF:latest"
