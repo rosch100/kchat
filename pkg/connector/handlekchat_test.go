@@ -303,7 +303,7 @@ func TestHttpToWS(t *testing.T) {
 
 func TestIsLoggedIn(t *testing.T) {
 	t.Parallel()
-	client := &KChatClient{}
+	client := &KChatClient{userLogin: &bridgev2.UserLogin{UserLogin: &database.UserLogin{ID: "test-login"}}}
 	if client.IsLoggedIn() {
 		t.Error("should not be logged in with nil client")
 	}
@@ -321,7 +321,7 @@ func TestIsLoggedIn(t *testing.T) {
 
 func TestIsThisUser(t *testing.T) {
 	t.Parallel()
-	client := &KChatClient{userID: "user123"}
+	client := &KChatClient{userLogin: &bridgev2.UserLogin{UserLogin: &database.UserLogin{ID: "test-login"}}, userID: "user123"}
 
 	if !client.IsThisUser(context.TODO(), MakeUserID("user123")) {
 		t.Error("should match own user ID")
