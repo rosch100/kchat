@@ -355,6 +355,9 @@ func (m *KChatClient) syncChannels(ctx context.Context) {
 			Msg("Syncing channel")
 		if ch.Type == model.ChannelTypeOpen {
 			m.publicChannelsMu.Lock()
+			if m.publicChannelIDs == nil {
+				m.publicChannelIDs = make(map[string]bool)
+			}
 			m.publicChannelIDs[ch.Id] = true
 			m.publicChannelsMu.Unlock()
 		}
