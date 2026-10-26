@@ -1,5 +1,8 @@
 # matrix-kchat
 
+[![CI](https://github.com/rosch100/kchat/actions/workflows/ci.yml/badge.svg)](https://github.com/rosch100/kchat/actions/workflows/ci.yml)
+[![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](LICENSE)
+
 A Matrix bridge for [Infomaniak kChat](https://www.infomaniak.com/en/kchat), built on the [mautrix bridgev2](https://github.com/mautrix/go) framework.
 
 Derived from [aiku/mautrix-mattermost](https://github.com/aiku/mautrix-mattermost) (MPL-2.0) — kChat speaks the Mattermost v4 REST/WebSocket API, so the connector reuses the official [Mattermost Go SDK](https://github.com/mattermost/mattermost-server) client.
