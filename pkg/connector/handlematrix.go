@@ -59,6 +59,10 @@ func (m *KChatClient) HandleMatrixMessage(ctx context.Context, msg *bridgev2.Mat
 		post.RootId = ParseMessageID(msg.ReplyTo.ID)
 	}
 
+	// kChat's API validates that file_ids is always an array; the SDK
+	// Post marshals a nil slice as null unless PreCommit normalizes it.
+	post.PreCommit()
+
 	createdPost, _, err := postClient.CreatePost(ctx, post)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create post: %w", err)
