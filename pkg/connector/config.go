@@ -34,6 +34,10 @@ type Config struct {
 	// primary message transport. Set to 0 to disable polling.
 	PollInterval int `yaml:"poll_interval"`
 
+	// RelayInviteUsers lists Matrix user IDs that are automatically invited
+	// into all shared portal rooms (split_portals: false deployments).
+	RelayInviteUsers []string `yaml:"relay_invite_users"`
+
 	BackfillEnabled  bool `yaml:"backfill_enabled"`
 	BackfillMaxCount int  `yaml:"backfill_max_count"`
 	TypingTimeout    int  `yaml:"typing_timeout"`
@@ -69,6 +73,7 @@ func upgradeConfig(helper up.Helper) {
 	helper.Copy(up.Int, "backfill_max_count")
 	helper.Copy(up.Int, "typing_timeout")
 	helper.Copy(up.Int, "poll_interval")
+	helper.Copy(up.List, "relay_invite_users")
 }
 
 func (mc *KChatConnector) GetConfig() (example string, data any, upgrader up.Upgrader) {

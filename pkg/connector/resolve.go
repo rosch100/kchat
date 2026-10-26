@@ -45,7 +45,7 @@ func (m *KChatClient) ResolveIdentifier(ctx context.Context, identifier string, 
 			return nil, err
 		}
 		resp.Chat = &bridgev2.CreateChatResponse{
-			PortalKey: makePortalKey(m.userLogin, channel.Id),
+			PortalKey: m.makePortalKey(channel.Id),
 		}
 	}
 	return resp, nil
@@ -203,7 +203,7 @@ func (m *KChatClient) relayReadReceipts(ctx context.Context, channelID string, m
 				LogContext: func(c zerolog.Context) zerolog.Context {
 					return c.Str("channel_id", channelID).Str("reader", member.UserId)
 				},
-				PortalKey: makePortalKey(m.userLogin, channelID),
+				PortalKey: m.makePortalKey(channelID),
 				Sender:    m.senderFor(member.UserId),
 			},
 			ReadUpTo: viewed,

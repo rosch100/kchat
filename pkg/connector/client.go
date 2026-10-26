@@ -374,7 +374,7 @@ func (m *KChatClient) syncChannels(ctx context.Context) {
 		m.eventSender.QueueRemoteEvent(m.userLogin, &simplevent.ChatResync{
 			EventMeta: simplevent.EventMeta{
 				Type:      bridgev2.RemoteEventChatResync,
-				PortalKey: makePortalKey(m.userLogin, ch.Id),
+				PortalKey: m.makePortalKey(ch.Id),
 				LogContext: func(c zerolog.Context) zerolog.Context {
 					return c.Str("channel_id", ch.Id).Str("channel_name", ch.Name)
 				},
@@ -387,6 +387,7 @@ func (m *KChatClient) syncChannels(ctx context.Context) {
 	}
 
 	m.log.Info().Msg("Channel sync complete")
+	m.inviteRelayUsers(ctx)
 }
 
 // Disconnect closes the WebSocket connection and stops the client's event loop.

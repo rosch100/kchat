@@ -27,3 +27,7 @@ typing_timeout: 5
 
 # Seconds between channel post polls (kChat broadcasts posts unreliably).
 poll_interval: 5
+
+# Matrix user IDs to invite into all shared portal rooms (team deployments
+# with split_portals: false).
+relay_invite_users: []

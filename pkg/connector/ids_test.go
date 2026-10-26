@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"maunium.net/go/mautrix/bridgev2"
+	"maunium.net/go/mautrix/bridgev2/bridgeconfig"
 	"maunium.net/go/mautrix/bridgev2/database"
 	"maunium.net/go/mautrix/bridgev2/networkid"
 )
@@ -154,12 +155,22 @@ func TestEmojiIDRoundTrip(t *testing.T) {
 
 func TestMakePortalKey(t *testing.T) {
 	t.Parallel()
-	key := makePortalKey(&bridgev2.UserLogin{UserLogin: &database.UserLogin{ID: "test-login"}}, "ch-test")
+	// Split portals enabled: the receiver must be set.
+	mc := &KChatConnector{Bridge: &bridgev2.Bridge{Config: &bridgeconfig.BridgeConfig{SplitPortals: true}}}
+	client := &KChatClient{connector: mc, userLogin: &bridgev2.UserLogin{UserLogin: &database.UserLogin{ID: "test-login"}}}
+	key := client.makePortalKey("ch-test")
 	if string(key.ID) != "ch-test" {
 		t.Errorf("makePortalKey ID: got %q, want %q", key.ID, "ch-test")
 	}
 	if key.Receiver != "test-login" {
 		t.Errorf("makePortalKey Receiver: got %q, want %q", key.Receiver, "test-login")
+	}
+
+	// Split portals disabled: shared portal key without receiver.
+	mc.Bridge.Config.SplitPortals = false
+	shared := client.makePortalKey("ch-test")
+	if shared.Receiver != "" {
+		t.Errorf("makePortalKey shared Receiver: got %q, want empty", shared.Receiver)
 	}
 }
 

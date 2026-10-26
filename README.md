@@ -43,6 +43,29 @@ docker run -d --name matrix-kchat \
 
 On first start the container writes `config.yaml` to `/data`; edit it, then restart the container. See the configuration section below.
 
+## Team deployment (shared, person-independent)
+
+For serving a whole kChat workspace from ONE bridge instance, deploy a second
+instance with a dedicated kChat bot account:
+
+1. Create a kChat bot account (*New → Integrations → Bot accounts*) and add it
+   to the public channels it should bridge (new public channels are
+   auto-joined on the `channel_created` event).
+2. Generate a new Beeper bridge registration (`bbctl config --type bridgev2 sh-myteam`)
+   and set in the `network` section:
+
+   ```yaml
+   split_portals: false          # shared rooms, one room per kChat channel
+   relay_invite_users:
+     - "@colleague:beeper.com"   # automatically invited into every portal
+   admin_api_addr: ""            # disable the admin API
+   ```
+
+3. Everyone in `relay_invite_users` sees every bridged channel; their messages
+   are relayed into kChat through the bot account (relay attribution).
+4. Colleagues keep their own kChat identity only with their own bridge instance
+   (see [docs/team-onboarding.md](docs/team-onboarding.md)).
+
 ## Team onboarding
 
 Team members of a kChat workspace (e.g. my-team): see the German step-by-step guide in [docs/team-onboarding.md](docs/team-onboarding.md) for setting up your own bridge instance on the shared server.

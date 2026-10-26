@@ -8,7 +8,6 @@ package connector
 import (
 	"strconv"
 
-	"maunium.net/go/mautrix/bridgev2"
 	"maunium.net/go/mautrix/bridgev2/networkid"
 )
 
@@ -61,10 +60,13 @@ func ParseEmojiID(emojiID networkid.EmojiID) string {
 }
 
 // makePortalKey creates a networkid.PortalKey from a kChat channel ID.
-// The receiver is always set so split-portals configs work correctly.
-func makePortalKey(login *bridgev2.UserLogin, channelID string) networkid.PortalKey {
-	return networkid.PortalKey{
-		ID:       MakePortalID(channelID),
-		Receiver: login.ID,
+// The receiver is set when the bridge runs with split portals (per-user
+// portals); shared deployments use receiver-less keys so every team member
+// sees the same room.
+func (m *KChatClient) makePortalKey(channelID string) networkid.PortalKey {
+	key := networkid.PortalKey{ID: MakePortalID(channelID)}
+	if m.connector != nil && m.connector.Bridge != nil && m.connector.Bridge.Config != nil && m.connector.Bridge.Config.SplitPortals {
+		key.Receiver = m.userLogin.ID
 	}
+	return key
 }

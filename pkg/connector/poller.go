@@ -163,6 +163,9 @@ func (m *KChatClient) pollOnce(ctx context.Context) {
 			} else {
 				m.relayReadReceipts(ctx, channelID, members)
 			}
+			if channelID == channels[len(channels)-1] {
+				m.inviteRelayUsers(ctx)
+			}
 		}
 	}
 }
@@ -320,7 +323,7 @@ func (m *KChatClient) relayPost(ctx context.Context, post *model.Post) {
 			LogContext: func(c zerolog.Context) zerolog.Context {
 				return c.Str("post_id", post.Id).Str("channel_id", post.ChannelId)
 			},
-			PortalKey:    makePortalKey(m.userLogin, post.ChannelId),
+			PortalKey:    m.makePortalKey(post.ChannelId),
 			Sender:       m.senderFor(post.UserId),
 			Timestamp:    time.UnixMilli(post.CreateAt),
 			CreatePortal: true,
@@ -342,7 +345,7 @@ func (m *KChatClient) relayPostEdit(ctx context.Context, post *model.Post) {
 			LogContext: func(c zerolog.Context) zerolog.Context {
 				return c.Str("post_id", post.Id).Str("channel_id", post.ChannelId)
 			},
-			PortalKey: makePortalKey(m.userLogin, post.ChannelId),
+			PortalKey: m.makePortalKey(post.ChannelId),
 			Sender:    m.senderFor(post.UserId),
 			Timestamp: time.UnixMilli(post.EditAt),
 		},
@@ -364,7 +367,7 @@ func (m *KChatClient) relayPostDelete(ctx context.Context, post *model.Post) {
 			LogContext: func(c zerolog.Context) zerolog.Context {
 				return c.Str("post_id", post.Id).Str("channel_id", post.ChannelId)
 			},
-			PortalKey: makePortalKey(m.userLogin, post.ChannelId),
+			PortalKey: m.makePortalKey(post.ChannelId),
 			Sender:    m.senderFor(post.UserId),
 			Timestamp: time.UnixMilli(post.DeleteAt),
 		},

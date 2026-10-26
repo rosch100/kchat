@@ -53,6 +53,8 @@ func (m *KChatClient) handleEvent(evt *model.WebSocketEvent) {
 		m.handleReactionRemoved(evt)
 	case model.WebsocketEventTyping:
 		m.handleTyping(evt)
+	case model.WebsocketEventChannelCreated:
+		m.handleChannelCreated(evt)
 	case kchatEventChannelViewed:
 		m.handleChannelViewed(evt)
 	default:
@@ -251,6 +253,34 @@ func (m *KChatClient) parseTypingEvent(evt *model.WebSocketEvent) (userID, chann
 	return uid, evt.GetBroadcast().ChannelId, true
 }
 
+// handleChannelCreated joins new public channels automatically, registers
+// them for realtime/polling and queues a resync. This keeps a shared
+// (person-independent) bridge covering the whole team without manual invites.
+func (m *KChatClient) handleChannelCreated(evt *model.WebSocketEvent) {
+	channelID, ok := evt.GetData()["channel_id"].(string)
+	if !ok || channelID == "" {
+		return
+	}
+	ctx := context.Background()
+	channel, err := m.rawGetChannel(ctx, channelID)
+	if err != nil {
+		m.log.Warn().Err(err).Str("channel_id", channelID).Msg("Failed to fetch created channel")
+		return
+	}
+	if channel.Type != model.ChannelTypeOpen {
+		m.log.Debug().Str("channel_id", channelID).Msg("Created channel is not public, skipping auto-join")
+		return
+	}
+	if err := m.joinChannel(ctx, channelID); err != nil {
+		m.log.Warn().Err(err).Str("channel_id", channelID).Msg("Failed to auto-join public channel")
+		return
+	}
+	m.log.Info().Str("channel_id", channelID).Str("channel_name", channel.Name).Msg("Auto-joined new public channel")
+	m.registerPolledChannel(ctx, channelID)
+	m.SubscribeChannel(channelID)
+	m.queueChannelResync(ctx, channel)
+}
+
 // parseChannelViewedEvent extracts channel viewed data. Returns ("", false) to skip.
 func (m *KChatClient) parseChannelViewedEvent(evt *model.WebSocketEvent) (channelID string, ok bool) {
 	chID, chOk := evt.GetData()["channel_id"].(string)
@@ -292,7 +322,7 @@ func (m *KChatClient) handlePosted(evt *model.WebSocketEvent) {
 			LogContext: func(c zerolog.Context) zerolog.Context {
 				return c.Str("post_id", post.Id).Str("channel_id", post.ChannelId)
 			},
-			PortalKey:    makePortalKey(m.userLogin, post.ChannelId),
+			PortalKey:    m.makePortalKey(post.ChannelId),
 			Sender:       m.senderFor(post.UserId),
 			Timestamp:    ts,
 			CreatePortal: true,
@@ -324,7 +354,7 @@ func (m *KChatClient) handlePostEdited(evt *model.WebSocketEvent) {
 			LogContext: func(c zerolog.Context) zerolog.Context {
 				return c.Str("post_id", post.Id).Str("channel_id", post.ChannelId)
 			},
-			PortalKey: makePortalKey(m.userLogin, post.ChannelId),
+			PortalKey: m.makePortalKey(post.ChannelId),
 			Sender:    m.senderFor(post.UserId),
 			Timestamp: ts,
 		},
@@ -354,7 +384,7 @@ func (m *KChatClient) handlePostDeleted(evt *model.WebSocketEvent) {
 			LogContext: func(c zerolog.Context) zerolog.Context {
 				return c.Str("post_id", post.Id).Str("channel_id", post.ChannelId)
 			},
-			PortalKey: makePortalKey(m.userLogin, post.ChannelId),
+			PortalKey: m.makePortalKey(post.ChannelId),
 			Sender:    m.senderFor(post.UserId),
 			Timestamp: ts,
 		},
@@ -381,7 +411,7 @@ func (m *KChatClient) handleReactionAdded(evt *model.WebSocketEvent) {
 			LogContext: func(c zerolog.Context) zerolog.Context {
 				return c.Str("post_id", reaction.PostId).Str("emoji", reaction.EmojiName)
 			},
-			PortalKey: makePortalKey(m.userLogin, evt.GetBroadcast().ChannelId),
+			PortalKey: m.makePortalKey(evt.GetBroadcast().ChannelId),
 			Sender:    m.senderFor(reaction.UserId),
 			Timestamp: ts,
 		},
@@ -407,7 +437,7 @@ func (m *KChatClient) handleReactionRemoved(evt *model.WebSocketEvent) {
 			LogContext: func(c zerolog.Context) zerolog.Context {
 				return c.Str("post_id", reaction.PostId).Str("emoji", reaction.EmojiName)
 			},
-			PortalKey: makePortalKey(m.userLogin, evt.GetBroadcast().ChannelId),
+			PortalKey: m.makePortalKey(evt.GetBroadcast().ChannelId),
 			Sender:    m.senderFor(reaction.UserId),
 		},
 		TargetMessage: MakeMessageID(reaction.PostId),
@@ -429,7 +459,7 @@ func (m *KChatClient) handleTyping(evt *model.WebSocketEvent) {
 	m.eventSender.QueueRemoteEvent(m.userLogin, &simplevent.Typing{
 		EventMeta: simplevent.EventMeta{
 			Type:      bridgev2.RemoteEventTyping,
-			PortalKey: makePortalKey(m.userLogin, channelID),
+			PortalKey: m.makePortalKey(channelID),
 			Sender:    m.senderFor(userID),
 		},
 		Timeout: time.Duration(timeout) * time.Second,
@@ -445,7 +475,7 @@ func (m *KChatClient) handleChannelViewed(evt *model.WebSocketEvent) {
 	m.eventSender.QueueRemoteEvent(m.userLogin, &simplevent.Receipt{
 		EventMeta: simplevent.EventMeta{
 			Type:      bridgev2.RemoteEventReadReceipt,
-			PortalKey: makePortalKey(m.userLogin, channelID),
+			PortalKey: m.makePortalKey(channelID),
 			Sender: bridgev2.EventSender{
 				IsFromMe: true,
 				Sender:   MakeUserID(m.userID),
