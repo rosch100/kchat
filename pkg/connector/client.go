@@ -45,7 +45,7 @@ type KChatClient struct {
 	eventSender remoteEventSender
 
 	client    *model.Client4
-	wsClient  *model.WebSocketClient
+	wsSocket  *pusherSocket
 	userID    string
 	teamID    string
 	serverURL string
@@ -167,17 +167,22 @@ func (m *KChatClient) Connect(ctx context.Context) {
 }
 
 func (m *KChatClient) connectWebSocket() error {
-	wsURL := httpToWS(m.serverURL)
-	var err error
-	m.wsClient, err = model.NewWebSocketClient4(wsURL, m.client.AuthToken)
+	if m.teamID == "" {
+		return fmt.Errorf("cannot subscribe without a team ID")
+	}
+	socket, err := newPusherSocket(m)
 	if err != nil {
 		return fmt.Errorf("failed to create websocket client: %w", err)
 	}
-	m.wsClient.Listen()
+	socket.setPendingChannels(m.teamID, m.userID)
+	m.wsSocket = socket
+	go func() {
+		if err := socket.Listen(); err != nil {
+			m.log.Error().Err(err).Msg("WebSocket connection failed")
+			m.handleWebSocketDisconnect()
+		}
+	}()
 
-	go m.listenWebSocket()
-
-	m.log.Info().Str("ws_url", wsURL).Msg("WebSocket connected")
 	return nil
 }
 
@@ -197,7 +202,7 @@ func (m *KChatClient) listenWebSocket() {
 		select {
 		case <-m.stopChan:
 			return
-		case event, ok := <-m.wsClient.EventChannel:
+		case event, ok := <-m.wsSocket.EventChannel:
 			if !ok {
 				m.log.Warn().Msg("WebSocket event channel closed, reconnecting")
 				m.handleWebSocketDisconnect()
@@ -316,9 +321,9 @@ func (m *KChatClient) Disconnect() {
 	m.stopOnce.Do(func() {
 		close(m.stopChan)
 	})
-	if m.wsClient != nil {
-		m.wsClient.Close()
-		m.wsClient = nil
+	if m.wsSocket != nil {
+		_ = m.wsSocket.conn.Close()
+		m.wsSocket = nil
 	}
 }
 

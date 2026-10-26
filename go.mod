@@ -3,6 +3,7 @@ module git.altanis.de/rosch/kchat
 go 1.26.0
 
 require (
+	github.com/gorilla/websocket v1.5.3
 	github.com/mattermost/mattermost/server/public v0.1.12
 	github.com/rs/zerolog v1.34.0
 	go.mau.fi/util v0.8.6
@@ -21,7 +22,6 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
-	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
