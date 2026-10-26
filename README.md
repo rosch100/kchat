@@ -31,6 +31,18 @@ Derived from [aiku/mautrix-mattermost](https://github.com/aiku/mautrix-mattermos
   macOS/Windows users build from source: Go 1.25+ plus libolm for E2EE.
 - A kChat access token: create one in the [Infomaniak Manager](https://manager.infomaniak.com/v3/ng/accounts/token/list) or via your kChat account settings
 
+## Docker
+
+A prebuilt Linux image (amd64/arm64) is published on GHCR with each release:
+
+```bash
+docker run -d --name matrix-kchat \
+  -v ./data:/data \
+  ghcr.io/rosch100/kchat:0.1
+```
+
+On first start the container writes `config.yaml` to `/data`; edit it, then restart the container. See the configuration section below.
+
 ## Setup with Beeper (bridge-manager)
 
 1. Clone this repository and build and install [bbctl](https://github.com/beeper/bridge-manager):
