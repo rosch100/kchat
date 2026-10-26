@@ -43,6 +43,12 @@ jobs:
             .
           cp /tmp/out/matrix-kchat matrix-kchat-${{ matrix.goos }}-${{ matrix.goarch }}
 
+      - name: Set up Go
+        if: matrix.goos == 'darwin'
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+
       - name: Build natively with libolm (macOS, CGO required for E2EE + sqlite)
         if: matrix.goos == 'darwin'
         run: |
