@@ -77,7 +77,7 @@ instance with a dedicated kChat bot account:
 
 ## Team onboarding
 
-Team members of a kChat workspace (e.g. my-team): see the German step-by-step guide in [docs/team-onboarding.md](docs/team-onboarding.md) for setting up your own bridge instance on the shared server.
+Team members of a kChat workspace: see the German step-by-step guide in [docs/team-onboarding.md](docs/team-onboarding.md) for setting up your own bridge instance on the shared server.
 
 ## Setup with Beeper (bridge-manager)
 
