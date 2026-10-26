@@ -26,6 +26,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Set up QEMU (arm64 emulation on amd64 runner)
+        if: matrix.goos == 'linux'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: matrix.goos == 'linux'
+        uses: docker/setup-buildx-action@v3
+
       - name: Build in container (bundles libolm)
         if: matrix.goos == 'linux'
         run: |
