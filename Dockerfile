@@ -3,7 +3,13 @@ FROM golang:1.26-alpine@sha256:27f2d3b83cfc5803c8078f8e730af0f7c431bf067afaec8f6
 ARG VERSION=unknown
 ARG COMMIT=unknown
 
-RUN apk add --no-cache gcc g++ musl-dev cmake make git
+RUN apk add --no-cache \
+    gcc=15.2.0-r5 \
+    g++=15.2.0-r5 \
+    musl-dev=1.2.6-r3 \
+    cmake=4.2.3-r0 \
+    make=4.4.1-r4 \
+    git=2.54.0-r0
 
 # Build libolm as a static library
 RUN git init /tmp/olm && \

@@ -14,6 +14,11 @@ Instead:
    on this repository, **or**
 2. Open a GitHub issue asking for a private channel, and we will follow up.
 
+We acknowledge vulnerability reports within 7 days and provide an initial
+assessment within 14 days. Confirmed vulnerabilities are fixed and disclosed
+coordinately with the reporter; timelines depend on severity and release
+complexity.
+
 ## Scope
 
 - The bridge binary and its configuration handling
