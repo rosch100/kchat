@@ -105,21 +105,39 @@ func rawGetUser(ctx context.Context, client *model.Client4, userID string) (*mod
 }
 
 // rawCreatePost creates a post and decodes the response with PHP quirks fixed.
+// kChat's validation is stricter than Mattermost's:
+//   - file_ids must be present as an array
+//   - props must be absent/null ({} and objects are rejected with 422)
 func rawCreatePost(ctx context.Context, client *model.Client4, post *model.Post) (*model.Post, error) {
+	post.PreCommit()
 	payload, err := json.Marshal(post)
 	if err != nil {
 		return nil, err
 	}
-	data, err := rawRequest(ctx, client, http.MethodPost, "/posts", payload)
+	var doc map[string]any
+	if err := json.Unmarshal(payload, &doc); err != nil {
+		return nil, err
+	}
+	if props, ok := doc["props"].(map[string]any); !ok || len(props) == 0 {
+		delete(doc, "props")
+	}
+	if _, ok := doc["file_ids"]; !ok {
+		doc["file_ids"] = []string{}
+	}
+	cleaned, err := json.Marshal(doc)
 	if err != nil {
 		return nil, err
 	}
-	var doc map[string]any
-	if err := json.Unmarshal(data, &doc); err != nil {
+	data, err := rawRequest(ctx, client, http.MethodPost, "/posts", cleaned)
+	if err != nil {
+		return nil, err
+	}
+	var respDoc map[string]any
+	if err := json.Unmarshal(data, &respDoc); err != nil {
 		return nil, fmt.Errorf("failed to parse post response: %w", err)
 	}
-	fixPHPObjectArrays(doc)
-	cleaned, err := json.Marshal(doc)
+	fixPHPObjectArrays(respDoc)
+	cleaned, err = json.Marshal(respDoc)
 	if err != nil {
 		return nil, err
 	}
