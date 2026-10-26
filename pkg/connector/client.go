@@ -238,6 +238,13 @@ func (m *KChatClient) handleWebSocketDisconnect() {
 	}
 }
 
+// SubscribeChannel subscribes the realtime socket to a single kChat channel
+// so posts in it are received (kChat broadcasts per-channel events on
+// presence-channel.<id>).
+func (m *KChatClient) SubscribeChannel(channelID string) {
+	m.wsSocket.subscribeChannel("presence-channel." + channelID)
+}
+
 // syncChannels fetches all kChat channels the user is a member of
 // (including DMs and group DMs) and queues ChatResync events so the bridge
 // creates portal rooms in Matrix.
@@ -277,6 +284,7 @@ func (m *KChatClient) syncChannels(ctx context.Context) {
 			Str("channel_name", ch.Name).
 			Str("channel_type", string(ch.Type)).
 			Msg("Syncing channel")
+		m.SubscribeChannel(ch.Id)
 
 		members, _, err := m.client.GetChannelMembers(ctx, ch.Id, 0, 200, "")
 		if err != nil {
