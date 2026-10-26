@@ -156,8 +156,11 @@ jobs:
           REF="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
           DIGESTS=""
           for f in *; do
-            DIGESTS="$DIGESTS $REF@sha256:$(cat "$f" | tr -d '[:space:]')"
+            D=$(cat "$f" | tr -d '[:space:]')
+            D=${D#sha256:}
+            DIGESTS="$DIGESTS $REF@sha256:$D"
           done
+          echo "manifest sources:$DIGESTS"
           VERSION="${{ github.ref_name }}"
           docker manifest create "$REF:$VERSION" $DIGESTS
           docker manifest create "$REF:0.1" $DIGESTS
