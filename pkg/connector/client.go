@@ -361,7 +361,7 @@ func (m *KChatClient) GetChatInfo(ctx context.Context, portal *bridgev2.Portal) 
 
 func (m *KChatClient) GetUserInfo(ctx context.Context, ghost *bridgev2.Ghost) (*bridgev2.UserInfo, error) {
 	mmUserID := ParseUserID(ghost.ID)
-	user, _, err := m.client.GetUser(ctx, mmUserID, "")
+	user, err := rawGetUser(ctx, m.client, mmUserID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user info: %w", err)
 	}
