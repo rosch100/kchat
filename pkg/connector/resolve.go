@@ -178,6 +178,7 @@ func (m *KChatClient) relayReadReceipts(ctx context.Context, channelID string, m
 		m.readReceiptMarks = make(map[string]map[string]time.Time)
 	}
 	channelMarks, ok := m.readReceiptMarks[channelID]
+	firstObservation := !ok
 	if !ok {
 		channelMarks = make(map[string]time.Time)
 		m.readReceiptMarks[channelID] = channelMarks
@@ -194,6 +195,11 @@ func (m *KChatClient) relayReadReceipts(ctx context.Context, channelID string, m
 			continue
 		}
 		channelMarks[member.UserId] = viewed
+		if firstObservation {
+			// First poll only establishes the baseline; emitting receipts for
+			// pre-existing read state would spam warnings for unknown targets.
+			continue
+		}
 		m.eventSender.QueueRemoteEvent(m.userLogin, &simplevent.Receipt{
 			EventMeta: simplevent.EventMeta{
 				Type: bridgev2.RemoteEventReadReceipt,
