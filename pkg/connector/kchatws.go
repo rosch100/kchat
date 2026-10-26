@@ -205,6 +205,22 @@ func (p *pusherSocket) authorizeChannel(channel string) (auth, channelData strin
 	return parsed.Auth, parsed.ChannelData, nil
 }
 
+// unmarshalPusherData decodes pusher event data, which arrives either as a
+// JSON string containing the payload or as the payload object directly.
+func unmarshalPusherData(raw json.RawMessage, target any) error {
+	if len(raw) == 0 {
+		return fmt.Errorf("empty pusher data")
+	}
+	if err := json.Unmarshal(raw, target); err == nil {
+		return nil
+	}
+	var dataStr string
+	if err := json.Unmarshal(raw, &dataStr); err != nil {
+		return err
+	}
+	return json.Unmarshal([]byte(dataStr), target)
+}
+
 // handleFrame processes a single raw pusher frame. App events carry their
 // payload as a JSON-encoded string roughly matching the Mattermost
 // WebSocketEvent layout, so they are normalized into model events.
@@ -223,8 +239,8 @@ func (p *pusherSocket) handleFrame(raw []byte) {
 		var connData struct {
 			SocketID string `json:"socket_id"`
 		}
-		if err := json.Unmarshal(frame.Data, &connData); err != nil {
-			p.log.Error().Err(err).Msg("Failed to parse connection_established")
+		if err := unmarshalPusherData(frame.Data, &connData); err != nil {
+			p.log.Error().Err(err).RawJSON("data", frame.Data).Msg("Failed to parse connection_established")
 			return
 		}
 		p.socketID = connData.SocketID
