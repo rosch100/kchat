@@ -1,0 +1,49 @@
+# Compiled binary
+/mautrix-mattermost
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary and coverage
+*.test
+*.out
+coverage.html
+
+# Go workspace
+go.work
+go.work.sum
+
+# Vendor
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config with secrets (don't commit real configs)
+config.yaml
+registration.yaml
+
+# Docker overrides
+docker-compose.override.yml
+
+# Build output
+dist/
+build/
+
+# Logs
+*.log
+
+# Claude Code local artifacts
+.claude/security-review-stamp
+.claude/lint-stamp
+.claude/settings.local.json

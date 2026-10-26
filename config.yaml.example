@@ -1,0 +1,275 @@
+# mautrix-mattermost — full bridgev2 configuration example
+#
+# Copy this file to config.yaml and fill in the required values.
+# Generate the registration file with:
+#   ./mautrix-mattermost -g -c config.yaml -r registration.yaml
+#
+# IMPORTANT: This config uses native bridgev2 format. Do NOT nest
+# database/bridge under "appservice:" — that is the legacy format
+# and will cause startup errors.
+
+# Mattermost-specific network configuration.
+network:
+    # URL of the Mattermost server to connect to.
+    # This can be overridden per-user in the login flow.
+    server_url: ""
+
+    # Displayname template for Mattermost users.
+    # Available variables: .Username, .Nickname, .FirstName, .LastName
+    displayname_template: "{{if .Nickname}}{{.Nickname}}{{else}}{{.Username}}{{end}} (kChat)"
+
+    # Username prefix for echo prevention. Any Mattermost username starting with
+    # this prefix is treated as a bridge-managed bot and its posts will not be
+    # relayed back to Matrix. Leave empty to disable prefix-based filtering.
+    bot_prefix: ""
+
+    # Listen address for the admin HTTP API (serves /api/reload-puppets).
+    # Set to empty string to disable the admin API.
+    admin_api_addr: ":29325"
+
+    # Enable message backfill to populate channel history on first sync.
+    backfill_enabled: false
+
+    # Maximum number of messages to backfill per channel.
+    backfill_max_count: 100
+
+    # Typing indicator timeout in seconds.
+    typing_timeout: 5
+
+# Config options that affect the central bridge module.
+bridge:
+    # The prefix for commands. Only required in non-management rooms.
+    command_prefix: "!mm"
+    # Should the bridge create a space for each login containing the rooms that account is in?
+    personal_filtering_spaces: true
+    # Whether the bridge should set names and avatars explicitly for DM portals.
+    private_chat_portal_meta: true
+    # Should events be handled asynchronously within portal rooms?
+    async_events: false
+    # Should every user have their own portals rather than sharing them?
+    split_portals: false
+    # Should the bridge resend m.bridge events to all portals on startup?
+    resend_bridge_info: false
+    # Should leaving Matrix rooms be bridged as leaving groups on the remote network?
+    bridge_matrix_leave: false
+    # Should m.notice messages be bridged?
+    bridge_notices: false
+    # Should room tags only be synced when creating the portal?
+    tag_only_on_create: true
+    # List of tags to allow bridging.
+    only_bridge_tags: [m.favourite, m.lowpriority]
+    # Should room mute status only be synced when creating the portal?
+    mute_only_on_create: true
+
+    # What should be done to portal rooms when a user logs out or is logged out?
+    cleanup_on_logout:
+        enabled: false
+        manual:
+            private: nothing
+            relayed: nothing
+            shared_no_users: nothing
+            shared_has_users: nothing
+        bad_credentials:
+            private: nothing
+            relayed: nothing
+            shared_no_users: nothing
+            shared_has_users: nothing
+
+    # Settings for relay mode
+    relay:
+        # Whether relay mode should be allowed.
+        enabled: false
+        # Should only admins be allowed to set themselves as relay users?
+        admin_only: true
+        # List of user login IDs which anyone can set as a relay.
+        default_relays: []
+        # The formats to use when sending messages via the relaybot.
+        message_formats:
+            m.text: "<b>{{ .Sender.DisambiguatedName }}</b>: {{ .Message }}"
+            m.notice: "<b>{{ .Sender.DisambiguatedName }}</b>: {{ .Message }}"
+            m.emote: "* <b>{{ .Sender.DisambiguatedName }}</b> {{ .Message }}"
+            m.file: "<b>{{ .Sender.DisambiguatedName }}</b> sent a file{{ if .Caption }}: {{ .Caption }}{{ end }}"
+            m.image: "<b>{{ .Sender.DisambiguatedName }}</b> sent an image{{ if .Caption }}: {{ .Caption }}{{ end }}"
+            m.audio: "<b>{{ .Sender.DisambiguatedName }}</b> sent an audio file{{ if .Caption }}: {{ .Caption }}{{ end }}"
+            m.video: "<b>{{ .Sender.DisambiguatedName }}</b> sent a video{{ if .Caption }}: {{ .Caption }}{{ end }}"
+            m.location: "<b>{{ .Sender.DisambiguatedName }}</b> sent a location{{ if .Caption }}: {{ .Caption }}{{ end }}"
+        displayname_format: "{{ .DisambiguatedName }}"
+
+    # Permissions for using the bridge.
+    # Permitted values: relay, commands, user, admin
+    # Permitted keys: * (all users), domain, mxid
+    permissions:
+        "*": relay
+        "example.com": user
+        "@admin:example.com": admin
+
+# Config for the bridge's database.
+database:
+    # The database type. "sqlite3-fk-wal" and "postgres" are supported.
+    type: postgres
+    # The database URI.
+    #   SQLite: file:mautrix-mattermost.db?_txlock=immediate
+    #   Postgres: postgres://user:password@host/database?sslmode=disable
+    uri: postgres://user:password@host/database?sslmode=disable
+    # Maximum number of connections.
+    max_open_conns: 5
+    max_idle_conns: 1
+    max_conn_idle_time: null
+    max_conn_lifetime: null
+
+# Homeserver details.
+homeserver:
+    # The address that this appservice can use to connect to the homeserver.
+    address: http://localhost:8008
+    # The domain of the homeserver (server_name).
+    domain: example.com
+    # What software is the homeserver running? (standard, synapse, dendrite, conduit)
+    software: standard
+    # URL to push real-time bridge status to (optional).
+    status_endpoint:
+    # Endpoint for reporting per-message status (optional).
+    message_send_checkpoint_endpoint:
+    # Does the homeserver support MSC2246 async media?
+    async_media: false
+    # Should the bridge use a websocket for connecting to the homeserver?
+    websocket: false
+    ping_interval_seconds: 0
+
+# Application service host/registration related details.
+# Changing these values requires regeneration of the registration.
+appservice:
+    # The address that the homeserver can use to connect to this appservice.
+    address: http://localhost:29319
+    # A public address that external services can use to reach this appservice (optional).
+    public_address: https://bridge.example.com
+
+    # The hostname and port where this appservice should listen.
+    # For Docker, change hostname to 0.0.0.0.
+    hostname: 0.0.0.0
+    port: 29319
+
+    # The unique ID of this appservice.
+    id: mattermost
+    # Appservice bot details.
+    bot:
+        username: mattermostbot
+        displayname: Mattermost bridge bot
+        avatar: mxc://maunium.net/mattermost
+
+    # Whether to receive ephemeral events via appservice transactions.
+    ephemeral_events: true
+    # Should incoming events be handled asynchronously?
+    async_transactions: false
+
+    # Authentication tokens for AS <-> HS communication. Autogenerated; do not modify.
+    as_token: "This value is generated when generating the registration"
+    hs_token: "This value is generated when generating the registration"
+
+    # Localpart template of MXIDs for remote users.
+    username_template: mattermost_{{.}}
+
+# Config options that affect the Matrix connector of the bridge.
+matrix:
+    message_status_events: false
+    delivery_receipts: false
+    message_error_notices: true
+    sync_direct_chat_list: true
+    federate_rooms: true
+    upload_file_threshold: 5242880
+
+# Segment-compatible analytics endpoint (optional).
+analytics:
+    token: null
+    url: https://api.segment.io/v1/track
+    user_id: null
+
+# Settings for provisioning API.
+provisioning:
+    prefix: /_matrix/provision
+    # Shared secret for authentication. "generate" creates a random secret.
+    shared_secret: generate
+    allow_matrix_auth: true
+    debug_endpoints: false
+
+# Public media access settings (optional).
+public_media:
+    enabled: false
+    signing_key: generate
+    expiry: 0
+    hash_length: 32
+
+# Custom mxc:// URI settings (optional).
+direct_media:
+    enabled: false
+    server_name: mattermost-media.example.com
+    well_known_response:
+    media_id_prefix:
+    allow_proxy: true
+    server_key: generate
+
+# Settings for backfilling messages from the framework level.
+# Note: The network-level backfill_enabled/backfill_max_count in the network
+# section controls whether the connector fetches history from Mattermost.
+# This section controls how the framework processes and delivers that history.
+backfill:
+    enabled: false
+    max_initial_messages: 50
+    max_catchup_messages: 500
+    unread_hours_threshold: 720
+    threads:
+        max_initial_messages: 50
+    queue:
+        enabled: false
+        batch_size: 100
+        batch_delay: 20
+        max_batches: -1
+        max_batches_override: {}
+
+# Settings for enabling double puppeting.
+double_puppet:
+    servers:
+        anotherserver.example.org: https://matrix.anotherserver.example.org
+    allow_discovery: false
+    secrets:
+        example.com: as_token:foobar
+
+# End-to-bridge encryption support options.
+encryption:
+    allow: false
+    default: false
+    require: false
+    appservice: false
+    msc4190: false
+    allow_key_sharing: true
+    pickle_key: generate
+    delete_keys:
+        delete_outbound_on_ack: false
+        dont_store_outbound: false
+        ratchet_on_decrypt: false
+        delete_fully_used_on_decrypt: false
+        delete_prev_on_new_session: false
+        delete_on_device_delete: false
+        periodically_delete_expired: false
+        delete_outdated_inbound: false
+    verification_levels:
+        receive: unverified
+        send: unverified
+        share: cross-signed-tofu
+    rotation:
+        enable_custom: false
+        milliseconds: 604800000
+        messages: 100
+        disable_device_change_key_rotation: false
+
+# Logging config. See https://github.com/tulir/zeroconfig for details.
+logging:
+    min_level: debug
+    writers:
+        - type: stdout
+          format: pretty-colored
+        - type: file
+          format: json
+          filename: ./logs/bridge.log
+          max_size: 100
+          max_backups: 10
+          compress: false

@@ -1,0 +1,25 @@
+# URL of the kChat server to connect to.
+# This can be overridden per-user in the login flow.
+server_url: ""
+
+# Displayname template for kChat users.
+# Available variables: .Username, .Nickname, .FirstName, .LastName
+displayname_template: "{{if .Nickname}}{{.Nickname}}{{else}}{{.Username}}{{end}} (kChat)"
+
+# Username prefix for echo prevention. Any kChat username starting with
+# this prefix is treated as a bridge-managed bot and its posts will not be
+# relayed back to Matrix. Leave empty to disable prefix-based filtering.
+bot_prefix: ""
+
+# Listen address for the admin HTTP API (serves /api/reload-puppets).
+# Set to empty string to disable the admin API.
+admin_api_addr: ":29325"
+
+# Enable message backfill to populate channel history on first sync.
+backfill_enabled: false
+
+# Maximum number of messages to backfill per channel.
+backfill_max_count: 100
+
+# Typing indicator timeout in seconds.
+typing_timeout: 5
