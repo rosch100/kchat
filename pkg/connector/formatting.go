@@ -6,8 +6,8 @@
 package connector
 
 import (
-	"git.altanis.de/rosch/kchat/pkg/connector/matrixfmt"
 	"git.altanis.de/rosch/kchat/pkg/connector/kchatfmt"
+	"git.altanis.de/rosch/kchat/pkg/connector/matrixfmt"
 	"maunium.net/go/mautrix/event"
 )
 

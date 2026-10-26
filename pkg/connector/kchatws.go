@@ -45,10 +45,10 @@ type pusherSocket struct {
 	httpClient *http.Client
 	log        zerolog.Logger
 
-	writeMu           sync.Mutex
-	pendingChannel    []string
+	writeMu            sync.Mutex
+	pendingChannel     []string
 	pendingChannelData map[string]string
-	subscribed        bool
+	subscribed         bool
 
 	// EventChannel receives normalized model.WebSocketEvent values.
 	EventChannel chan *model.WebSocketEvent
@@ -81,16 +81,16 @@ func newPusherSocket(m *KChatClient) (*pusherSocket, error) {
 		return nil, fmt.Errorf("failed to dial %s: %w", u.String(), err)
 	}
 	return &pusherSocket{
-		client:      m,
-		conn:        conn,
-		authToken:   m.client.AuthToken,
-		serverURL:   m.serverURL,
-		teamID:      m.teamID,
-		userID:      m.userID,
-		httpClient:  &http.Client{Timeout: 15 * time.Second},
-		log:         m.log.With().Str("component", "pusher_socket").Logger(),
+		client:       m,
+		conn:         conn,
+		authToken:    m.client.AuthToken,
+		serverURL:    m.serverURL,
+		teamID:       m.teamID,
+		userID:       m.userID,
+		httpClient:   &http.Client{Timeout: 15 * time.Second},
+		log:          m.log.With().Str("component", "pusher_socket").Logger(),
 		EventChannel: make(chan *model.WebSocketEvent, 256),
-		stopChan:    m.stopChan,
+		stopChan:     m.stopChan,
 	}, nil
 }
 

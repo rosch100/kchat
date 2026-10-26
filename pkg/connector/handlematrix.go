@@ -12,6 +12,7 @@ import (
 	"github.com/mattermost/mattermost/server/public/model"
 	"maunium.net/go/mautrix/bridgev2"
 	"maunium.net/go/mautrix/bridgev2/database"
+	"maunium.net/go/mautrix/bridgev2/networkid"
 	"maunium.net/go/mautrix/event"
 )
 
@@ -63,10 +64,19 @@ func (m *KChatClient) HandleMatrixMessage(ctx context.Context, msg *bridgev2.Mat
 	// Post marshals a nil slice as null unless PreCommit normalizes it.
 	post.PreCommit()
 
+	// Register the transaction ID so bridgev2 drops the echo of this post,
+	// and tag the post with it as fallback if kChat keeps props.
+	// safeAddPendingToIgnore tolerates portals without initialized pending
+	// maps (only possible in unit tests).
+	txnID := networkid.TransactionID(msg.Event.ID.String())
+	safeAddPendingToIgnore(msg, txnID)
+	post.AddProp("mx_txn", string(txnID))
+
 	createdPost, err := rawCreatePost(ctx, postClient, post)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create post: %w", err)
 	}
+	m.rememberEcho(echoKindPost, createdPost.Id)
 
 	return &bridgev2.MatrixMessageResponse{
 		DB: &database.Message{
@@ -123,6 +133,9 @@ func (m *KChatClient) HandleMatrixEdit(ctx context.Context, msg *bridgev2.Matrix
 	}
 
 	_, _, err := m.client.PatchPost(ctx, postID, patch)
+	if err == nil {
+		m.rememberEcho(echoKindEdit, postID)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to edit post: %w", err)
 	}
@@ -141,6 +154,7 @@ func (m *KChatClient) HandleMatrixMessageRemove(ctx context.Context, msg *bridge
 	if err != nil {
 		return fmt.Errorf("failed to delete post: %w", err)
 	}
+	m.rememberEcho(echoKindDelete, postID)
 	return nil
 }
 
@@ -173,6 +187,7 @@ func (m *KChatClient) HandleMatrixReaction(ctx context.Context, msg *bridgev2.Ma
 	if err != nil {
 		return nil, fmt.Errorf("failed to save reaction: %w", err)
 	}
+	m.rememberEcho(echoKindReaction, postID+":"+emojiName+":"+m.userID)
 
 	return &database.Reaction{
 		EmojiID: MakeEmojiID(emojiName),
