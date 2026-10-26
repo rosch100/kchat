@@ -61,6 +61,15 @@ instance with a dedicated kChat bot account:
    admin_api_addr: ""            # disable the admin API
    ```
 
+   And in the top-level `bridge:` section, allow relay mode (the connector
+   sets itself as relay user on every portal automatically):
+
+   ```yaml
+   bridge:
+     relay:
+       enabled: true
+   ```
+
 3. Everyone in `relay_invite_users` sees every bridged channel; their messages
    are relayed into kChat through the bot account (relay attribution).
 4. Colleagues keep their own kChat identity only with their own bridge instance

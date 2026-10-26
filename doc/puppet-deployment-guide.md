@@ -220,7 +220,7 @@ bridge:
 ```yaml
 services:
   matrix-kchat:
-    image: ghcr.io/rosch/matrix-kchat:latest
+    image: ghcr.io/rosch100/kchat:latest
     ports:
       - "29319:29319"   # Appservice API
       - "29320:29320"   # Admin API (reload-puppets)
@@ -281,7 +281,7 @@ spec:
     spec:
       containers:
         - name: matrix-kchat
-          image: ghcr.io/rosch/matrix-kchat:latest
+          image: ghcr.io/rosch100/kchat:latest
           args: ["-c", "/data/config.yaml"]
           ports:
             - containerPort: 29319

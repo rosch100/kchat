@@ -92,8 +92,12 @@ func (m *KChatClient) inviteRelayUsers(ctx context.Context) {
 		m.log.Warn().Err(err).Msg("Failed to list shared portals for invites")
 		return
 	}
+	m.publicChannelsMu.Lock()
+	defer m.publicChannelsMu.Unlock()
 	for _, portal := range portals {
-		if portal.MXID == "" {
+		if portal.MXID == "" || !m.publicChannelIDs[string(portal.ID)] {
+			// Only public team channels are relay targets. DMs and group DMs
+			// stay private even in shared deployments.
 			continue
 		}
 		for _, userMXID := range m.connector.Config.RelayInviteUsers {

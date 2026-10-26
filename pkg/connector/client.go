@@ -57,6 +57,9 @@ type KChatClient struct {
 	realtimeMu        sync.Mutex
 	realtimeChannels  map[string]bool
 
+	publicChannelsMu sync.Mutex
+	publicChannelIDs map[string]bool
+
 	readReceiptMu    sync.Mutex
 	readReceiptMarks map[string]map[string]time.Time
 	lastMemberPoll   time.Time
@@ -184,6 +187,9 @@ func (m *KChatClient) Connect(ctx context.Context) {
 	// Start the post poller (server-side broadcasts are unreliable on kChat).
 	if m.pollWatermarks == nil {
 		m.pollWatermarks = make(map[string]*channelWatermark)
+	}
+	if m.publicChannelIDs == nil {
+		m.publicChannelIDs = make(map[string]bool)
 	}
 	if m.baselinedChannels == nil {
 		m.baselinedChannels = make(map[string]bool)
@@ -347,6 +353,11 @@ func (m *KChatClient) syncChannels(ctx context.Context) {
 			Str("channel_name", ch.Name).
 			Str("channel_type", string(ch.Type)).
 			Msg("Syncing channel")
+		if ch.Type == model.ChannelTypeOpen {
+			m.publicChannelsMu.Lock()
+			m.publicChannelIDs[ch.Id] = true
+			m.publicChannelsMu.Unlock()
+		}
 		m.SubscribeChannel(ch.Id)
 		m.registerPolledChannel(ctx, ch.Id)
 

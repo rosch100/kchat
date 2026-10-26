@@ -259,7 +259,8 @@ func safeBaseURL(base string) (string, error) {
 	if u.Host == "" {
 		return "", fmt.Errorf("server URL %q has no host", base)
 	}
-	return u.Scheme + "://" + u.Host, nil
+	// Preserve a configured path prefix (e.g. reverse proxies).
+	return strings.TrimSuffix(u.Scheme+"://"+u.Host+u.Path, "/"), nil
 }
 
 // authorizeChannel requests the signed auth string for a channel.
