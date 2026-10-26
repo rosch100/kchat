@@ -270,7 +270,7 @@ func (m *KChatClient) handlePosted(evt *model.WebSocketEvent) {
 			LogContext: func(c zerolog.Context) zerolog.Context {
 				return c.Str("post_id", post.Id).Str("channel_id", post.ChannelId)
 			},
-			PortalKey:    makePortalKey(post.ChannelId),
+			PortalKey:    makePortalKey(m.userLogin, post.ChannelId),
 			Sender:       m.senderFor(post.UserId),
 			Timestamp:    ts,
 			CreatePortal: true,
@@ -301,7 +301,7 @@ func (m *KChatClient) handlePostEdited(evt *model.WebSocketEvent) {
 			LogContext: func(c zerolog.Context) zerolog.Context {
 				return c.Str("post_id", post.Id).Str("channel_id", post.ChannelId)
 			},
-			PortalKey: makePortalKey(post.ChannelId),
+			PortalKey: makePortalKey(m.userLogin, post.ChannelId),
 			Sender:    m.senderFor(post.UserId),
 			Timestamp: ts,
 		},
@@ -331,7 +331,7 @@ func (m *KChatClient) handlePostDeleted(evt *model.WebSocketEvent) {
 			LogContext: func(c zerolog.Context) zerolog.Context {
 				return c.Str("post_id", post.Id).Str("channel_id", post.ChannelId)
 			},
-			PortalKey: makePortalKey(post.ChannelId),
+			PortalKey: makePortalKey(m.userLogin, post.ChannelId),
 			Sender:    m.senderFor(post.UserId),
 			Timestamp: ts,
 		},
@@ -358,7 +358,7 @@ func (m *KChatClient) handleReactionAdded(evt *model.WebSocketEvent) {
 			LogContext: func(c zerolog.Context) zerolog.Context {
 				return c.Str("post_id", reaction.PostId).Str("emoji", reaction.EmojiName)
 			},
-			PortalKey: makePortalKey(evt.GetBroadcast().ChannelId),
+			PortalKey: makePortalKey(m.userLogin, evt.GetBroadcast().ChannelId),
 			Sender:    m.senderFor(reaction.UserId),
 			Timestamp: ts,
 		},
@@ -384,7 +384,7 @@ func (m *KChatClient) handleReactionRemoved(evt *model.WebSocketEvent) {
 			LogContext: func(c zerolog.Context) zerolog.Context {
 				return c.Str("post_id", reaction.PostId).Str("emoji", reaction.EmojiName)
 			},
-			PortalKey: makePortalKey(evt.GetBroadcast().ChannelId),
+			PortalKey: makePortalKey(m.userLogin, evt.GetBroadcast().ChannelId),
 			Sender:    m.senderFor(reaction.UserId),
 		},
 		TargetMessage: MakeMessageID(reaction.PostId),
@@ -406,7 +406,7 @@ func (m *KChatClient) handleTyping(evt *model.WebSocketEvent) {
 	m.eventSender.QueueRemoteEvent(m.userLogin, &simplevent.Typing{
 		EventMeta: simplevent.EventMeta{
 			Type:      bridgev2.RemoteEventTyping,
-			PortalKey: makePortalKey(channelID),
+			PortalKey: makePortalKey(m.userLogin, channelID),
 			Sender:    m.senderFor(userID),
 		},
 		Timeout: time.Duration(timeout) * time.Second,
@@ -422,7 +422,7 @@ func (m *KChatClient) handleChannelViewed(evt *model.WebSocketEvent) {
 	m.eventSender.QueueRemoteEvent(m.userLogin, &simplevent.Receipt{
 		EventMeta: simplevent.EventMeta{
 			Type:      bridgev2.RemoteEventReadReceipt,
-			PortalKey: makePortalKey(channelID),
+			PortalKey: makePortalKey(m.userLogin, channelID),
 			Sender: bridgev2.EventSender{
 				IsFromMe: true,
 				Sender:   MakeUserID(m.userID),

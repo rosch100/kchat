@@ -301,7 +301,7 @@ func (m *KChatClient) syncChannels(ctx context.Context) {
 		m.eventSender.QueueRemoteEvent(m.userLogin, &simplevent.ChatResync{
 			EventMeta: simplevent.EventMeta{
 				Type:      bridgev2.RemoteEventChatResync,
-				PortalKey: makePortalKey(ch.Id),
+				PortalKey: makePortalKey(m.userLogin, ch.Id),
 				LogContext: func(c zerolog.Context) zerolog.Context {
 					return c.Str("channel_id", ch.Id).Str("channel_name", ch.Name)
 				},
