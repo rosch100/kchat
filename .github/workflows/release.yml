@@ -11,24 +11,24 @@ permissions:
 jobs:
   binaries:
     name: Build ${{ matrix.goos }}/${{ matrix.goarch }} binary
-    runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
           - goos: linux
             goarch: amd64
+            runner: ubuntu-latest
           - goos: linux
             goarch: arm64
+            runner: ubuntu-24.04-arm
           - goos: darwin
             goarch: arm64
+            runner: ubuntu-latest
           - goos: darwin
             goarch: amd64
+            runner: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7
-
-      - name: Set up QEMU (arm64 emulation on amd64 runner)
-        if: matrix.goos == 'linux'
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         if: matrix.goos == 'linux'
