@@ -265,6 +265,10 @@ func (m *KChatClient) handlePosted(evt *model.WebSocketEvent) {
 	if post == nil {
 		return
 	}
+	if m.hasRelayed(echoKindRelayPost, post.Id) {
+		return
+	}
+	m.markRelayed(echoKindRelayPost, post.Id)
 
 	m.log.Debug().
 		Str("post_id", post.Id).

@@ -32,7 +32,7 @@ func fixPHPObjectArrays(v any) {
 	}
 	for key, val := range m {
 		switch key {
-		case "props", "notify_props", "custom_status", "settings", "fields":
+		case "props", "notify_props", "custom_status", "settings", "fields", "posts", "metadata":
 			if arr, isEmpty := val.([]any); isEmpty && len(arr) == 0 {
 				m[key] = map[string]any{}
 			}
