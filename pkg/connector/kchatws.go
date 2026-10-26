@@ -53,6 +53,9 @@ type pusherSocket struct {
 	// EventChannel receives normalized model.WebSocketEvent values.
 	EventChannel chan *model.WebSocketEvent
 	stopChan     chan struct{}
+	// activityTimeout is the server-provided inactivity window after which
+	// the socket is closed (pusher close code 4201) unless the client pings.
+	activityTimeout time.Duration
 }
 
 const (
@@ -98,6 +101,7 @@ func newPusherSocket(m *KChatClient) (*pusherSocket, error) {
 // until the socket closes, the bridge stops, or an error occurs.
 func (p *pusherSocket) Listen() error {
 	go p.subscribeAfterConnect()
+	go p.pingLoop()
 	for {
 		select {
 		case <-p.stopChan:
@@ -113,6 +117,28 @@ func (p *pusherSocket) Listen() error {
 			continue
 		}
 		p.handleFrame(data)
+	}
+}
+
+// pingLoop keeps the socket alive: pusher servers close connections that
+// stay silent for activity_timeout (close code 4201).
+func (p *pusherSocket) pingLoop() {
+	interval := p.activityTimeout / 2
+	if interval < 5*time.Second {
+		interval = 5 * time.Second
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-p.stopChan:
+			return
+		case <-ticker.C:
+			if err := p.writeJSON(map[string]any{"event": "pusher:ping", "data": map[string]any{}}); err != nil {
+				p.log.Warn().Err(err).Msg("Failed to send pusher ping")
+				return
+			}
+		}
 	}
 }
 
@@ -243,14 +269,18 @@ func (p *pusherSocket) handleFrame(raw []byte) {
 	switch frame.Event {
 	case "pusher:connection_established":
 		var connData struct {
-			SocketID string `json:"socket_id"`
+			SocketID        string `json:"socket_id"`
+			ActivityTimeout int    `json:"activity_timeout"`
 		}
 		if err := unmarshalPusherData(frame.Data, &connData); err != nil {
 			p.log.Error().Err(err).RawJSON("data", frame.Data).Msg("Failed to parse connection_established")
 			return
 		}
 		p.socketID = connData.SocketID
-		p.log.Info().Str("socket_id", p.socketID).Msg("Pusher connection established")
+		if connData.ActivityTimeout > 0 {
+			p.activityTimeout = time.Duration(connData.ActivityTimeout) * time.Second
+		}
+		p.log.Info().Str("socket_id", p.socketID).Dur("activity_timeout", p.activityTimeout).Msg("Pusher connection established")
 	case "pusher:ping":
 		if err := p.writeJSON(map[string]any{"event": "pusher:pong"}); err != nil {
 			p.log.Warn().Err(err).Msg("Failed to answer pusher ping")
