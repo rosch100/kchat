@@ -1,6 +1,17 @@
 Third-Party Software Notices
 ============================
 
+Derivative work
+---------------
+matrix-kchat is derived from aiku/mautrix-mattermost
+(https://github.com/aiku/mautrix-mattermost) by Remi Philippe,
+licensed under the Mozilla Public License 2.0. The upstream
+copyright headers and this notice file are retained per the
+license requirements.
+
+Direct dependencies
+-------------------
+
 matrix-kchat depends on the following third-party packages.
 Each package is listed with its license type. Full license texts
 are available in the linked repositories or in the Go module cache.
