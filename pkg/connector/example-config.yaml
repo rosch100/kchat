@@ -26,6 +26,7 @@ backfill_max_count: 100
 typing_timeout: 5
 
 # Seconds between channel post polls (kChat broadcasts posts unreliably).
+# 0 disables polling — including read receipts and relay invites.
 poll_interval: 5
 
 # Matrix user IDs to invite into all shared portal rooms (team deployments

@@ -317,6 +317,11 @@ func (f *fakeMM) handler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 
+	// POST /api/v4/channels/{id}/members (joinChannel)
+	case r.Method == "POST" && strings.HasPrefix(path, "/api/v4/channels/") && strings.HasSuffix(path, "/members"):
+		w.WriteHeader(http.StatusCreated)
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+
 	default:
 		w.WriteHeader(http.StatusNotFound)
 		_ = json.NewEncoder(w).Encode(map[string]string{"message": "not found: " + path})

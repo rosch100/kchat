@@ -2309,3 +2309,51 @@ func TestHandlePostDeleted_SenderLoginSet(t *testing.T) {
 		t.Errorf("SenderLogin: got %q, want %q", events[0].GetSender().SenderLogin, "dp-deleter")
 	}
 }
+
+func TestHandleChannelCreated_AutoJoin(t *testing.T) {
+	t.Parallel()
+	fm := newFakeMM()
+	defer fm.Close()
+	fm.Channels["ch-new"] = &model.Channel{Id: "ch-new", Name: "created-channel", DisplayName: "Created Channel", Type: model.ChannelTypeOpen}
+	mc := newFullTestClient(fm.Server.URL)
+	mock := testMock(mc)
+
+	evt := newWebSocketEvent(model.WebsocketEventChannelCreated, "ch-new", map[string]any{
+		"channel_id": "ch-new",
+	})
+
+	mc.handleChannelCreated(evt)
+
+	if !fm.CalledPath("/api/v4/channels/ch-new/members") {
+		t.Error("expected auto-join POST to channel members")
+	}
+	events := mock.Events()
+	if len(events) != 1 {
+		t.Fatalf("expected 1 ChatResync event, got %d", len(events))
+	}
+	if events[0].GetPortalKey().ID != "ch-new" {
+		t.Errorf("portal key ID: got %q, want %q", events[0].GetPortalKey().ID, "ch-new")
+	}
+}
+
+func TestHandleChannelCreated_PrivateChannelSkipped(t *testing.T) {
+	t.Parallel()
+	fm := newFakeMM()
+	defer fm.Close()
+	fm.Channels["ch-priv"] = &model.Channel{Id: "ch-priv", Name: "private-channel", Type: model.ChannelTypePrivate}
+	mc := newFullTestClient(fm.Server.URL)
+	mock := testMock(mc)
+
+	evt := newWebSocketEvent(model.WebsocketEventChannelCreated, "ch-priv", map[string]any{
+		"channel_id": "ch-priv",
+	})
+
+	mc.handleChannelCreated(evt)
+
+	if fm.CalledPath("/api/v4/channels/ch-priv/members") {
+		t.Error("private channel must not be joined")
+	}
+	if len(mock.Events()) != 0 {
+		t.Errorf("expected 0 events for private channel, got %d", len(mock.Events()))
+	}
+}

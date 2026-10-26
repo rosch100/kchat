@@ -27,7 +27,8 @@ network:
     # Set to empty string to disable the admin API.
     admin_api_addr: ":29325"
 
-    # Enable message backfill to populate channel history on first sync.
+    # 0 disables polling — including read receipts and relay invites.
+# Enable message backfill to populate channel history on first sync.
     backfill_enabled: false
 
     # Maximum number of messages to backfill per channel.

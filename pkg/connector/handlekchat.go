@@ -271,11 +271,13 @@ func (m *KChatClient) handleChannelCreated(evt *model.WebSocketEvent) {
 		m.log.Debug().Str("channel_id", channelID).Msg("Created channel is not public, skipping auto-join")
 		return
 	}
+	// A failed join (e.g. "already a member", missing permission) must not
+	// abort registration: registration is idempotent and a failed poll shows
+	// up in the logs as a recoverable warning.
 	if err := m.joinChannel(ctx, channelID); err != nil {
-		m.log.Warn().Err(err).Str("channel_id", channelID).Msg("Failed to auto-join public channel")
-		return
+		m.log.Warn().Err(err).Str("channel_id", channelID).Msg("Auto-join failed (may already be a member)")
 	}
-	m.log.Info().Str("channel_id", channelID).Str("channel_name", channel.Name).Msg("Auto-joined new public channel")
+	m.log.Info().Str("channel_id", channelID).Str("channel_name", channel.Name).Msg("Registering new public channel")
 	m.registerPolledChannel(ctx, channelID)
 	m.SubscribeChannel(channelID)
 	m.queueChannelResync(ctx, channel)

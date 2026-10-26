@@ -31,7 +31,8 @@ type Config struct {
 
 	// PollInterval is the seconds between channel post polls. kChat's
 	// realtime broadcasts for posts are unreliable, so polling is the
-	// primary message transport. Set to 0 to disable polling.
+	// primary message transport. Set to 0 to disable polling — this also
+	// disables read receipts and relay invites (they ride on the poll loop).
 	PollInterval int `yaml:"poll_interval"`
 
 	// RelayInviteUsers lists Matrix user IDs that are automatically invited
