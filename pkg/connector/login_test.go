@@ -19,15 +19,12 @@ func TestGetLoginFlows(t *testing.T) {
 	mc := &KChatConnector{}
 	flows := mc.GetLoginFlows()
 
-	if len(flows) != 2 {
-		t.Fatalf("GetLoginFlows: got %d flows, want 2", len(flows))
+	if len(flows) != 1 {
+		t.Fatalf("GetLoginFlows: got %d flows, want 1", len(flows))
 	}
 
 	if flows[0].ID != "token" {
 		t.Errorf("flows[0].ID: got %q, want %q", flows[0].ID, "token")
-	}
-	if flows[1].ID != "password" {
-		t.Errorf("flows[1].ID: got %q, want %q", flows[1].ID, "password")
 	}
 
 	for i, flow := range flows {
@@ -55,24 +52,6 @@ func TestCreateLogin_Token(t *testing.T) {
 	}
 	if tp.connector != mc {
 		t.Error("TokenLoginProcess.connector should be the connector")
-	}
-}
-
-func TestCreateLogin_Password(t *testing.T) {
-	mc := &KChatConnector{}
-	ctx := context.Background()
-
-	proc, err := mc.CreateLogin(ctx, nil, "password")
-	if err != nil {
-		t.Fatalf("CreateLogin(password): unexpected error: %v", err)
-	}
-
-	pp, ok := proc.(*PasswordLoginProcess)
-	if !ok {
-		t.Fatalf("CreateLogin(password): got %T, want *PasswordLoginProcess", proc)
-	}
-	if pp.connector != mc {
-		t.Error("PasswordLoginProcess.connector should be the connector")
 	}
 }
 
@@ -148,78 +127,10 @@ func TestTokenSubmitUserInput_ServerURL(t *testing.T) {
 	}
 }
 
-func TestPasswordLoginStart(t *testing.T) {
-	mc := &KChatConnector{}
-	pp := &PasswordLoginProcess{connector: mc}
-	ctx := context.Background()
-
-	step, err := pp.Start(ctx)
-	if err != nil {
-		t.Fatalf("PasswordLoginProcess.Start: unexpected error: %v", err)
-	}
-
-	if step.Type != bridgev2.LoginStepTypeUserInput {
-		t.Errorf("step.Type: got %q, want %q", step.Type, bridgev2.LoginStepTypeUserInput)
-	}
-	if step.StepID != "ch.altanis.kchat.login.server_url" {
-		t.Errorf("step.StepID: got %q, want %q", step.StepID, "ch.altanis.kchat.login.server_url")
-	}
-	if step.UserInputParams == nil {
-		t.Fatal("step.UserInputParams should not be nil")
-	}
-	if len(step.UserInputParams.Fields) != 1 {
-		t.Fatalf("fields count: got %d, want 1", len(step.UserInputParams.Fields))
-	}
-	if step.UserInputParams.Fields[0].ID != "server_url" {
-		t.Errorf("field[0].ID: got %q, want %q", step.UserInputParams.Fields[0].ID, "server_url")
-	}
-}
-
-func TestPasswordSubmitUserInput_ServerURL(t *testing.T) {
-	mc := &KChatConnector{}
-	pp := &PasswordLoginProcess{connector: mc}
-	ctx := context.Background()
-
-	step, err := pp.SubmitUserInput(ctx, map[string]string{
-		"server_url": "https://mm.example.com",
-	})
-	if err != nil {
-		t.Fatalf("SubmitUserInput(server_url): unexpected error: %v", err)
-	}
-
-	if pp.serverURL != "https://mm.example.com" {
-		t.Errorf("serverURL: got %q, want %q", pp.serverURL, "https://mm.example.com")
-	}
-	if step.StepID != "ch.altanis.kchat.login.credentials" {
-		t.Errorf("step.StepID: got %q, want %q", step.StepID, "ch.altanis.kchat.login.credentials")
-	}
-	if step.Type != bridgev2.LoginStepTypeUserInput {
-		t.Errorf("step.Type: got %q, want %q", step.Type, bridgev2.LoginStepTypeUserInput)
-	}
-	if step.UserInputParams == nil {
-		t.Fatal("step.UserInputParams should not be nil")
-	}
-	if len(step.UserInputParams.Fields) != 2 {
-		t.Fatalf("fields count: got %d, want 2", len(step.UserInputParams.Fields))
-	}
-	if step.UserInputParams.Fields[0].ID != "username" {
-		t.Errorf("field[0].ID: got %q, want %q", step.UserInputParams.Fields[0].ID, "username")
-	}
-	if step.UserInputParams.Fields[1].ID != "password" {
-		t.Errorf("field[1].ID: got %q, want %q", step.UserInputParams.Fields[1].ID, "password")
-	}
-}
-
 func TestTokenCancel(t *testing.T) {
 	tp := &TokenLoginProcess{}
 	// Cancel should not panic.
 	tp.Cancel()
-}
-
-func TestPasswordCancel(t *testing.T) {
-	pp := &PasswordLoginProcess{}
-	// Cancel should not panic.
-	pp.Cancel()
 }
 
 func TestMakeGhostUserID(t *testing.T) {
@@ -426,47 +337,6 @@ func TestValidateTokenLogin_ClientTokenSet(t *testing.T) {
 // ---------------------------------------------------------------------------
 // Password login integration tests
 // ---------------------------------------------------------------------------
-
-func TestPasswordSubmitUserInput_Credentials(t *testing.T) {
-	fake := newFakeMM()
-	defer fake.Close()
-
-	mc := &KChatConnector{}
-	pp := &PasswordLoginProcess{
-		connector: mc,
-		serverURL: fake.Server.URL,
-	}
-	ctx := context.Background()
-
-	// Submit credentials step. The kChat client will call /api/v4/users/login
-	// which our fake doesn't handle, so it will return an error from the Login call.
-	_, err := pp.SubmitUserInput(ctx, map[string]string{
-		"username": "alice",
-		"password": "secret",
-	})
-	// Login will fail because the fake server doesn't handle /api/v4/users/login.
-	if err == nil {
-		t.Fatal("expected login failure error, got nil")
-	}
-}
-
-func TestPasswordFinishLogin_TeamsFailed(t *testing.T) {
-	fake := newFakeMM()
-	defer fake.Close()
-
-	fake.Users["uid2"] = &model.User{Id: "uid2", Username: "bob"}
-	fake.TokenToUser["pass-tok"] = "uid2"
-	fake.FailEndpoints["/teams"] = true
-
-	mc := &KChatConnector{}
-	pp := &PasswordLoginProcess{connector: mc}
-	ctx := context.Background()
-
-	_, err := pp.finishLogin(ctx, fake.Server.URL, "pass-tok", &model.User{Id: "uid2", Username: "bob"})
-	if err == nil {
-		t.Fatal("expected teams failure error, got nil")
-	}
-}
 
 func TestGetLoginMeta(t *testing.T) {
 	meta := &UserLoginMetadata{

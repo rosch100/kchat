@@ -23,11 +23,6 @@ func (mc *KChatConnector) GetLoginFlows() []bridgev2.LoginFlow {
 			Description: "Log in with a kChat personal access token",
 			ID:          "token",
 		},
-		{
-			Name:        "Password",
-			Description: "Log in with username and password",
-			ID:          "password",
-		},
 	}
 }
 
@@ -36,11 +31,6 @@ func (mc *KChatConnector) CreateLogin(_ context.Context, user *bridgev2.User, fl
 	switch flowID {
 	case "token":
 		return &TokenLoginProcess{
-			connector: mc,
-			user:      user,
-		}, nil
-	case "password":
-		return &PasswordLoginProcess{
 			connector: mc,
 			user:      user,
 		}, nil
@@ -139,119 +129,6 @@ func (t *TokenLoginProcess) finishLogin(ctx context.Context, serverURL, token st
 		Type:         bridgev2.LoginStepTypeComplete,
 		StepID:       "ch.altanis.kchat.login.complete",
 		Instructions: fmt.Sprintf("Logged in as %s on %s", result.User.Username, serverURL),
-		CompleteParams: &bridgev2.LoginCompleteParams{
-			UserLoginID: loginID,
-			UserLogin:   ul,
-		},
-	}, nil
-}
-
-// PasswordLoginProcess implements username/password login.
-type PasswordLoginProcess struct {
-	connector *KChatConnector
-	user      *bridgev2.User
-	serverURL string
-}
-
-var _ bridgev2.LoginProcessUserInput = (*PasswordLoginProcess)(nil)
-
-func (p *PasswordLoginProcess) Start(_ context.Context) (*bridgev2.LoginStep, error) {
-	return &bridgev2.LoginStep{
-		Type:         bridgev2.LoginStepTypeUserInput,
-		StepID:       "ch.altanis.kchat.login.server_url",
-		Instructions: "Enter your kChat server URL",
-		UserInputParams: &bridgev2.LoginUserInputParams{
-			Fields: []bridgev2.LoginInputDataField{
-				{
-					Type: bridgev2.LoginInputFieldTypeURL,
-					ID:   "server_url",
-					Name: "Server URL",
-				},
-			},
-		},
-	}, nil
-}
-
-func (p *PasswordLoginProcess) SubmitUserInput(ctx context.Context, input map[string]string) (*bridgev2.LoginStep, error) {
-	if serverURL, ok := input["server_url"]; ok && p.serverURL == "" {
-		p.serverURL = serverURL
-		return &bridgev2.LoginStep{
-			Type:         bridgev2.LoginStepTypeUserInput,
-			StepID:       "ch.altanis.kchat.login.credentials",
-			Instructions: "Enter your kChat credentials",
-			UserInputParams: &bridgev2.LoginUserInputParams{
-				Fields: []bridgev2.LoginInputDataField{
-					{
-						Type: bridgev2.LoginInputFieldTypeUsername,
-						ID:   "username",
-						Name: "Username",
-					},
-					{
-						Type: bridgev2.LoginInputFieldTypePassword,
-						ID:   "password",
-						Name: "Password",
-					},
-				},
-			},
-		}, nil
-	}
-
-	username := input["username"]
-	password := input["password"]
-
-	client := model.NewAPIv4Client(p.serverURL)
-	user, _, err := client.Login(ctx, username, password)
-	if err != nil {
-		return nil, fmt.Errorf("login failed: %w", err)
-	}
-
-	// Use the session token from the successful login.
-	return p.finishLogin(ctx, p.serverURL, client.AuthToken, user)
-}
-
-func (p *PasswordLoginProcess) Cancel() {}
-
-func (p *PasswordLoginProcess) finishLogin(ctx context.Context, serverURL, token string, me *model.User) (*bridgev2.LoginStep, error) {
-	client := model.NewAPIv4Client(serverURL)
-	client.SetToken(token)
-
-	teamID, err := fetchFirstTeamID(ctx, client, me.Id)
-	if err != nil {
-		return nil, err
-	}
-
-	loginID := MakeUserLoginID(me.Id)
-
-	ul, err := p.user.NewLogin(ctx, &database.UserLogin{
-		ID:         loginID,
-		RemoteName: fmt.Sprintf("%s @ %s", me.Username, serverURL),
-	}, &bridgev2.NewLoginParams{
-		LoadUserLogin: p.connector.LoadUserLogin,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create login: %w", err)
-	}
-
-	meta := ul.Metadata.(*UserLoginMetadata)
-	meta.ServerURL = serverURL
-	meta.Token = token
-	meta.UserID = me.Id
-	meta.TeamID = teamID
-	if err := ul.Save(ctx); err != nil {
-		return nil, fmt.Errorf("failed to save login: %w", err)
-	}
-
-	mmClient := ul.Client.(*KChatClient)
-	mmClient.client = client
-	mmClient.serverURL = serverURL
-	mmClient.userID = me.Id
-	mmClient.teamID = teamID
-	mmClient.Connect(ctx)
-
-	return &bridgev2.LoginStep{
-		Type:         bridgev2.LoginStepTypeComplete,
-		StepID:       "ch.altanis.kchat.login.complete",
-		Instructions: fmt.Sprintf("Logged in as %s on %s", me.Username, serverURL),
 		CompleteParams: &bridgev2.LoginCompleteParams{
 			UserLoginID: loginID,
 			UserLogin:   ul,
