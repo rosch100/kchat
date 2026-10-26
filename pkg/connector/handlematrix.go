@@ -63,7 +63,7 @@ func (m *KChatClient) HandleMatrixMessage(ctx context.Context, msg *bridgev2.Mat
 	// Post marshals a nil slice as null unless PreCommit normalizes it.
 	post.PreCommit()
 
-	createdPost, _, err := postClient.CreatePost(ctx, post)
+	createdPost, err := rawCreatePost(ctx, postClient, post)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create post: %w", err)
 	}
