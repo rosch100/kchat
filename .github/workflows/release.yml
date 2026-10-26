@@ -22,10 +22,10 @@ jobs:
             runner: ubuntu-24.04-arm
           - goos: darwin
             goarch: arm64
-            runner: ubuntu-latest
+            runner: macos-14
           - goos: darwin
             goarch: amd64
-            runner: ubuntu-latest
+            runner: macos-13
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7
@@ -43,10 +43,14 @@ jobs:
             .
           cp /tmp/out/matrix-kchat matrix-kchat-${{ matrix.goos }}-${{ matrix.goarch }}
 
-      - name: Cross-compile (CGO disabled for non-linux targets)
-        if: matrix.goos != 'linux'
+      - name: Build natively with libolm (macOS, CGO required for E2EE + sqlite)
+        if: matrix.goos == 'darwin'
         run: |
-          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
+          git clone --depth 1 https://gitlab.matrix.org/matrix-org/olm.git /tmp/olm
+          cmake -S /tmp/olm -B /tmp/olm/build -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+          cmake --build /tmp/olm/build --parallel
+          cmake --install /tmp/olm/build --prefix /usr/local
+          CGO_CFLAGS='-I/usr/local/include' CGO_LDFLAGS='-L/usr/local/lib' \
             go build -ldflags "-s -w \
             -X main.Tag=${{ github.ref_name }} \
             -X main.Commit=${{ github.sha }}" \
