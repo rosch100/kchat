@@ -47,6 +47,9 @@ jobs:
         if: matrix.goos == 'darwin'
         run: |
           git clone --depth 1 https://gitlab.matrix.org/matrix-org/olm.git /tmp/olm
+          # Upstream bug: clang rejects the const-pointer increment in list.hh.
+          sed -i '' 's/T \* const other_pos = other._data;/T * other_pos = other._data;/' /tmp/olm/include/olm/list.hh || \
+            sed -i 's/T \* const other_pos = other._data;/T * other_pos = other._data;/' /tmp/olm/include/olm/list.hh
           cmake -S /tmp/olm -B /tmp/olm/build -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_POLICY_VERSION_MINIMUM=3.5
           cmake --build /tmp/olm/build --parallel
           cmake --install /tmp/olm/build --prefix /usr/local
