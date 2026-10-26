@@ -84,10 +84,22 @@ func (m *KChatClient) lookupUser(ctx context.Context, identifier string) (*model
 	needle := strings.ToLower(identifier)
 	for _, u := range users {
 		if strings.EqualFold(u.Username, needle) ||
-			(u.Email != "" && strings.EqualFold(u.Email, needle)) ||
-			(u.Nickname != "" && strings.EqualFold(u.Nickname, needle)) {
+			(u.Email != "" && strings.EqualFold(u.Email, needle)) {
 			return u, nil
 		}
+	}
+	// Nicknames are not unique: accept a nickname match only when exactly
+	// one user carries it, and only after username/email were considered.
+	var nickMatch *model.User
+	nickCount := 0
+	for _, u := range users {
+		if u.Nickname != "" && strings.EqualFold(u.Nickname, needle) {
+			nickMatch = u
+			nickCount++
+		}
+	}
+	if nickCount == 1 {
+		return nickMatch, nil
 	}
 	// No single-candidate fallback: fuzzy prefix hits (e.g. "bob" -> "bobby")
 	// must not open DMs with the wrong person. Fuzzy lookup is SearchUsers' job.
