@@ -163,11 +163,12 @@ jobs:
           done
           echo "manifest sources:$DIGESTS"
           VERSION="${{ github.ref_name }}"
+          MINOR=$(echo "$VERSION" | sed -n "s/^v\\([0-9]*\\.[0-9]*\\)\\..*/\\1/p")
           docker manifest create "$REF:$VERSION" $DIGESTS
-          docker manifest create "$REF:0.1" $DIGESTS
+          docker manifest create "$REF:$MINOR" $DIGESTS
           docker manifest create "$REF:latest" $DIGESTS
           docker manifest push "$REF:$VERSION"
-          docker manifest push "$REF:0.1"
+          docker manifest push "$REF:$MINOR"
           docker manifest push "$REF:latest"
 
       - name: Inspect image
