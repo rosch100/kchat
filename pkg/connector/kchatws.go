@@ -277,6 +277,8 @@ func (p *pusherSocket) handleFrame(raw []byte) {
 	}
 	if !strings.HasPrefix(frame.Event, "pusher:") {
 		p.log.Debug().Str("event", frame.Event).Str("channel", frame.Channel).Msg("Pusher app event")
+	} else if frame.Event != "pusher:pong" {
+		p.log.Debug().Str("event", frame.Event).Str("channel", frame.Channel).Msg("Pusher control frame")
 	}
 	switch frame.Event {
 	case "pusher:connection_established":
