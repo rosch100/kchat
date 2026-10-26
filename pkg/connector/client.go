@@ -421,7 +421,7 @@ func (m *KChatClient) IsThisUser(_ context.Context, userID networkid.UserID) boo
 
 func (m *KChatClient) GetChatInfo(ctx context.Context, portal *bridgev2.Portal) (*bridgev2.ChatInfo, error) {
 	channelID := ParsePortalID(portal.ID)
-	channel, _, err := m.client.GetChannel(ctx, channelID, "")
+	channel, _, err := m.client.GetChannel(ctx, channelID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get channel info: %w", err)
 	}
