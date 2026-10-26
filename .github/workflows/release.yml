@@ -173,4 +173,5 @@ jobs:
 
       - name: Inspect image
         run: |
+          VERSION="${{ github.ref_name }}"
           docker buildx imagetools inspect "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$VERSION"
