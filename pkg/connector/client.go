@@ -165,6 +165,9 @@ func (m *KChatClient) Connect(ctx context.Context) {
 	// so a socket failure must not block the poller or channel sync.
 	if m.teamID == "" {
 		m.log.Warn().Msg("No team ID; realtime socket unavailable, relying on polling")
+		m.userLogin.BridgeState.Send(status.BridgeState{
+			StateEvent: status.StateConnected,
+		})
 	} else if err := m.connectWebSocket(); err != nil {
 		m.log.Error().Err(err).Msg("WebSocket connection failed; relying on polling")
 		m.userLogin.BridgeState.Send(status.BridgeState{

@@ -42,6 +42,33 @@ func (wm *channelWatermark) max() int64 {
 // pollerKeyPrefix namespaces the KV entries storing per-channel watermarks.
 const pollerKeyPrefix = "kchat-poll-wm:"
 
+// watermarkKey builds the per-login, per-channel KV key for poll watermarks.
+func (m *KChatClient) watermarkKey(channelID string) database.Key {
+	return database.Key(pollerKeyPrefix + string(m.userLogin.ID) + ":" + channelID)
+}
+
+// legacyWatermarkKey is the pre-multi-login watermark key format.
+func legacyWatermarkKey(channelID string) database.Key {
+	return database.Key(pollerKeyPrefix + channelID)
+}
+
+// loadWatermark reads the login-scoped watermark, falling back to the legacy
+// global key for watermarks persisted before multi-login support.
+func (m *KChatClient) loadWatermark(ctx context.Context, channelID string) *channelWatermark {
+	wm := &channelWatermark{}
+	raw := ""
+	if m.connector.Bridge.DB != nil {
+		raw = m.connector.Bridge.DB.KV.Get(ctx, m.watermarkKey(channelID))
+		if raw == "" {
+			raw = m.connector.Bridge.DB.KV.Get(ctx, legacyWatermarkKey(channelID))
+		}
+	}
+	if raw != "" {
+		_ = json.Unmarshal([]byte(raw), wm)
+	}
+	return wm
+}
+
 // registerPolledChannel adds a channel to the poller and loads its watermark.
 func (m *KChatClient) registerPolledChannel(ctx context.Context, channelID string) {
 	m.pollMu.Lock()
@@ -52,13 +79,7 @@ func (m *KChatClient) registerPolledChannel(ctx context.Context, channelID strin
 	if _, ok := m.pollWatermarks[channelID]; ok {
 		return
 	}
-	wm := &channelWatermark{}
-	if m.connector.Bridge.DB != nil {
-		raw := m.connector.Bridge.DB.KV.Get(ctx, database.Key(pollerKeyPrefix+channelID))
-		if raw != "" {
-			_ = json.Unmarshal([]byte(raw), wm)
-		}
-	}
+	wm := m.loadWatermark(ctx, channelID)
 	m.pollWatermarks[channelID] = wm
 }
 
@@ -164,10 +185,11 @@ func (m *KChatClient) pollChannel(ctx context.Context, channelID string) error {
 		m.baselinedChannels[channelID] = true
 	}
 	m.baselineMu.Unlock()
-	if !baselined {
-		// First poll after (re)start with no stored watermark: establish the
-		// baseline from the newest post instead of relaying history. History
-		// delivery is the backfill path's job.
+	if !baselined && wm.CreateAt == 0 && wm.EditAt == 0 {
+		// First poll with no persisted watermark: establish the baseline from
+		// the newest post instead of relaying history. History delivery is
+		// the backfill path's job. A persisted watermark always wins so
+		// messages sent during downtime are relayed after a restart.
 		resp0, err := m.rawGetChannelPosts(ctx, channelID, 1)
 		if err != nil {
 			m.baselineMu.Lock()
@@ -184,7 +206,7 @@ func (m *KChatClient) pollChannel(ctx context.Context, channelID string) error {
 			}
 		}
 		if raw, err := json.Marshal(wm); err == nil && m.connector.Bridge.DB != nil {
-			m.connector.Bridge.DB.KV.Set(ctx, database.Key(pollerKeyPrefix+channelID), string(raw))
+			m.connector.Bridge.DB.KV.Set(ctx, m.watermarkKey(channelID), string(raw))
 		}
 		m.log.Info().Str("channel_id", channelID).Int64("baseline", wm.max()).Msg("Baselined channel watermark")
 	}
@@ -251,7 +273,7 @@ func (m *KChatClient) pollChannel(ctx context.Context, channelID string) error {
 		wm.CreateAt = newCreate
 		wm.EditAt = newEdit
 		if raw, err := json.Marshal(wm); err == nil && m.connector.Bridge.DB != nil {
-			m.connector.Bridge.DB.KV.Set(ctx, database.Key(pollerKeyPrefix+channelID), string(raw))
+			m.connector.Bridge.DB.KV.Set(ctx, m.watermarkKey(channelID), string(raw))
 		}
 	}
 	if relayed > 0 {
