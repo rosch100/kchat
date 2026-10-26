@@ -27,8 +27,8 @@ Derived from [aiku/mautrix-mattermost](https://github.com/aiku/mautrix-mattermos
 
 ## Requirements
 
-- Go 1.25+ (build only)
-- libolm for E2EE (`brew install libolm` on macOS)
+- Release binaries are provided for **Linux** (amd64/arm64, Docker-based CI).
+  macOS/Windows users build from source: Go 1.25+ plus libolm for E2EE.
 - A kChat access token: create one in the [Infomaniak Manager](https://manager.infomaniak.com/v3/ng/accounts/token/list) or via your kChat account settings
 
 ## Setup with Beeper (bridge-manager)

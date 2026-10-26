@@ -20,12 +20,6 @@ jobs:
           - goos: linux
             goarch: arm64
             runner: ubuntu-24.04-arm
-          - goos: darwin
-            goarch: arm64
-            runner: macos-14
-          - goos: darwin
-            goarch: amd64
-            runner: macos-13
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7
@@ -42,28 +36,6 @@ jobs:
             --output type=local,dest=/tmp/out \
             .
           cp /tmp/out/matrix-kchat matrix-kchat-${{ matrix.goos }}-${{ matrix.goarch }}
-
-      - name: Set up Go
-        if: matrix.goos == 'darwin'
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.26.x'
-
-      - name: Build natively with libolm (macOS, CGO required for E2EE + sqlite)
-        if: matrix.goos == 'darwin'
-        run: |
-          git clone --depth 1 https://gitlab.matrix.org/matrix-org/olm.git /tmp/olm
-          # Upstream bug: clang rejects the const-pointer increment in list.hh.
-          sed -i '' 's/T \* const other_pos = other._data;/T * other_pos = other._data;/' /tmp/olm/include/olm/list.hh || \
-            sed -i 's/T \* const other_pos = other._data;/T * other_pos = other._data;/' /tmp/olm/include/olm/list.hh
-          cmake -S /tmp/olm -B /tmp/olm/build -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX="$HOME/.local" -DCMAKE_POLICY_VERSION_MINIMUM=3.5
-          cmake --build /tmp/olm/build --parallel
-          cmake --install /tmp/olm/build --prefix "$HOME/.local"
-          CGO_CFLAGS="-I$HOME/.local/include" CGO_LDFLAGS="-L$HOME/.local/lib" \
-            go build -ldflags "-s -w \
-            -X main.Tag=${{ github.ref_name }} \
-            -X main.Commit=${{ github.sha }}" \
-            -o matrix-kchat-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/matrix-kchat
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
