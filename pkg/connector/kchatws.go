@@ -179,6 +179,15 @@ func (p *pusherSocket) setPendingChannels(teamID, userID string) {
 	}
 }
 
+// subscribeChannel subscribes to an additional channel after the initial
+// handshake (e.g. per-channel presence subscriptions for synced channels).
+func (p *pusherSocket) subscribeChannel(channel string) {
+	if p == nil || p.socketID == "" {
+		return
+	}
+	p.subscribe(channel)
+}
+
 // subscribe exchanges socket_id and channel_name for a signed subscription
 // at the kChat broadcasting endpoint, then subscribes on the socket.
 func (p *pusherSocket) subscribe(channel string) error {
@@ -265,6 +274,9 @@ func (p *pusherSocket) handleFrame(raw []byte) {
 	if err := json.Unmarshal(raw, &frame); err != nil {
 		p.log.Warn().Err(err).Msg("Failed to parse pusher frame")
 		return
+	}
+	if !strings.HasPrefix(frame.Event, "pusher:") {
+		p.log.Debug().Str("event", frame.Event).Str("channel", frame.Channel).Msg("Pusher app event")
 	}
 	switch frame.Event {
 	case "pusher:connection_established":
