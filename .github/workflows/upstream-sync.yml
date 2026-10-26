@@ -1,0 +1,69 @@
+name: Upstream sync
+
+on:
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    name: Apply upstream changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch upstream
+        run: |
+          git fetch --no-tags \
+            https://github.com/aiku/mautrix-mattermost.git \
+            main:refs/remotes/upstream/main
+
+      - name: Apply changes since the last successful sync
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          base="$(tr -d '[:space:]' < .github/upstream-sync-base)"
+          upstream="$(git rev-parse refs/remotes/upstream/main)"
+
+          git cat-file -e "$base^{commit}"
+
+          if [[ "$base" == "$upstream" ]]; then
+            echo "Upstream is already synchronized at $upstream."
+            exit 0
+          fi
+
+          git diff --binary "$base" "$upstream" > /tmp/upstream.patch
+          if ! git apply --3way --index /tmp/upstream.patch; then
+            echo "::error::Upstream changes conflict with kChat-specific changes."
+            echo "Resolve the affected files manually and advance .github/upstream-sync-base to $upstream."
+            exit 1
+          fi
+
+          printf '%s\n' "$upstream" > .github/upstream-sync-base
+
+      - name: Create or update synchronization pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: sync/upstream-mautrix-mattermost
+          base: main
+          delete-branch: true
+          commit-message: "chore: sync aiku/mautrix-mattermost"
+          title: "chore: sync aiku/mautrix-mattermost"
+          body: |
+            Aktualisiert KChat mit Änderungen aus
+            `aiku/mautrix-mattermost`.
+
+            Bitte die Änderungen auf kChat-spezifische Auswirkungen prüfen.
+            Die regulären CI-Checks müssen erfolgreich sein.
