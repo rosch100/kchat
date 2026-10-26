@@ -50,10 +50,10 @@ jobs:
           # Upstream bug: clang rejects the const-pointer increment in list.hh.
           sed -i '' 's/T \* const other_pos = other._data;/T * other_pos = other._data;/' /tmp/olm/include/olm/list.hh || \
             sed -i 's/T \* const other_pos = other._data;/T * other_pos = other._data;/' /tmp/olm/include/olm/list.hh
-          cmake -S /tmp/olm -B /tmp/olm/build -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+          cmake -S /tmp/olm -B /tmp/olm/build -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX="$HOME/.local" -DCMAKE_POLICY_VERSION_MINIMUM=3.5
           cmake --build /tmp/olm/build --parallel
-          cmake --install /tmp/olm/build --prefix /usr/local
-          CGO_CFLAGS='-I/usr/local/include' CGO_LDFLAGS='-L/usr/local/lib' \
+          cmake --install /tmp/olm/build --prefix "$HOME/.local"
+          CGO_CFLAGS="-I$HOME/.local/include" CGO_LDFLAGS="-L$HOME/.local/lib" \
             go build -ldflags "-s -w \
             -X main.Tag=${{ github.ref_name }} \
             -X main.Commit=${{ github.sha }}" \
