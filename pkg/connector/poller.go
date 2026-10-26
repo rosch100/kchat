@@ -156,6 +156,9 @@ func (m *KChatClient) pollChannel(ctx context.Context, channelID string) error {
 	}
 
 	m.baselineMu.Lock()
+	if m.baselinedChannels == nil {
+		m.baselinedChannels = make(map[string]bool)
+	}
 	_, baselined := m.baselinedChannels[channelID]
 	if !baselined {
 		m.baselinedChannels[channelID] = true

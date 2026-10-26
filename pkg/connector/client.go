@@ -182,6 +182,9 @@ func (m *KChatClient) Connect(ctx context.Context) {
 	if m.pollWatermarks == nil {
 		m.pollWatermarks = make(map[string]*channelWatermark)
 	}
+	if m.baselinedChannels == nil {
+		m.baselinedChannels = make(map[string]bool)
+	}
 	go m.pollLoop(ctx)
 
 	// Sync existing channels to create portal rooms in Matrix.
