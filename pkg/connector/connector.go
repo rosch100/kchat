@@ -380,6 +380,7 @@ func (mc *KChatConnector) setupDoublePuppet(ctx context.Context, user *bridgev2.
 		mc.Bridge.Log.Error().Err(err).Msg("Double puppet: failed to marshal login payload")
 		return
 	}
+	// #nosec G704 -- URL built from operator-controlled SYNAPSE_URL env var, not user input.
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, synapseURL+"/_matrix/client/v3/login",
 		bytes.NewReader(loginPayload))
 	if err != nil {

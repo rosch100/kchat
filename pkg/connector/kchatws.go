@@ -165,12 +165,9 @@ func (p *pusherSocket) subscribeAfterConnect() {
 	channels := append(append([]string{}, p.pendingChannel...), p.extraChannels...)
 	p.stateMu.Unlock()
 	for _, channel := range channels {
-		if err := p.subscribe(channel); err != nil {
-			// Presence channels may be denied by kChat's broadcasting policy;
-			// message events arrive on the team channel, so this is not fatal.
-			p.log.Warn().Err(err).Str("channel", channel).Msg("Channel subscription failed")
-			continue
-		}
+		// Presence channels may be denied by kChat's broadcasting policy;
+		// message events arrive on the team channel, so this is not fatal.
+		_ = p.subscribe(channel) // error logged inside subscribe
 	}
 	p.stateMu.Lock()
 	p.subscribed = true
@@ -201,7 +198,9 @@ func (p *pusherSocket) subscribeChannel(channel string) {
 	}
 	p.stateMu.Unlock()
 	if ready {
-		p.subscribe(channel)
+		if err := p.subscribe(channel); err != nil {
+			p.log.Warn().Err(err).Str("channel", channel).Msg("Channel subscription failed")
+		}
 	}
 }
 
@@ -218,7 +217,9 @@ func (p *pusherSocket) setExtraChannels(channelIDs []string) {
 	p.stateMu.Unlock()
 	if ready {
 		for _, ch := range channels {
-			p.subscribe(ch)
+			if err := p.subscribe(ch); err != nil {
+				p.log.Warn().Err(err).Str("channel", ch).Msg("Channel subscription failed")
+			}
 		}
 	}
 }
@@ -244,6 +245,23 @@ func (p *pusherSocket) subscribe(channel string) error {
 	return nil
 }
 
+// safeBaseURL validates that a base URL is a normal http(s) endpoint before
+// it is used to build request URLs. Values come from operator configuration
+// (config.yaml / login flow), not from remote data.
+func safeBaseURL(base string) (string, error) {
+	u, err := url.Parse(base)
+	if err != nil {
+		return "", fmt.Errorf("invalid server URL %q: %w", base, err)
+	}
+	if u.Scheme != "https" && u.Scheme != "http" {
+		return "", fmt.Errorf("unsupported scheme %q in server URL %q", u.Scheme, base)
+	}
+	if u.Host == "" {
+		return "", fmt.Errorf("server URL %q has no host", base)
+	}
+	return u.Scheme + "://" + u.Host, nil
+}
+
 // authorizeChannel requests the signed auth string for a channel.
 func (p *pusherSocket) authorizeChannel(channel string) (auth, channelData string, err error) {
 	p.stateMu.Lock()
@@ -253,17 +271,23 @@ func (p *pusherSocket) authorizeChannel(channel string) (auth, channelData strin
 		"socket_id":    {socketID},
 		"channel_name": {channel},
 	}
-	req, reqErr := http.NewRequest(http.MethodPost, p.serverURL+"/broadcasting/auth", strings.NewReader(form.Encode()))
+	base, baseErr := safeBaseURL(p.serverURL)
+	if baseErr != nil {
+		return "", "", baseErr
+	}
+	// #nosec G704 -- base URL is operator configuration, scheme-validated above.
+	req, reqErr := http.NewRequest(http.MethodPost, base+"/broadcasting/auth", strings.NewReader(form.Encode()))
 	if reqErr != nil {
 		return "", "", reqErr
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Authorization", "Bearer "+p.authToken)
+	// #nosec G704 -- request target is the scheme-validated operator server.
 	resp, doErr := p.httpClient.Do(req)
 	if doErr != nil {
 		return "", "", fmt.Errorf("broadcasting auth request failed: %w", doErr)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
 		return "", "", readErr

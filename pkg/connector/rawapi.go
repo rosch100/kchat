@@ -64,6 +64,8 @@ var rawHTTPClient = &http.Client{Timeout: 30 * time.Second}
 // rawRequest performs an authenticated GET/POST against the API URL and
 // returns the response body after applying fixPHPObjectArrays.
 func rawRequest(ctx context.Context, client *model.Client4, method, path string, body []byte) ([]byte, error) {
+	// #nosec G704 -- client.APIURL is operator configuration (kChat server URL
+	// from the login flow); scheme is validated on connect.
 	req, err := http.NewRequestWithContext(ctx, method, client.APIURL+path, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
@@ -72,11 +74,12 @@ func rawRequest(ctx context.Context, client *model.Client4, method, path string,
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
+	// #nosec G704 -- see above; target is the operator-configured API URL.
 	resp, err := rawHTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
