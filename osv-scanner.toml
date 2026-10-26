@@ -1,0 +1,3 @@
+[[IgnoredVulns]]
+id = "GO-2026-5932"
+reason = "The project does not import golang.org/x/crypto/openpgp; it uses only pbkdf2, scrypt, hkdf, and curve25519 from the module."

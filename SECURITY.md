@@ -10,9 +10,14 @@ Please do **not** report security vulnerabilities through public GitHub issues.
 
 Instead:
 
-1. Use GitHub's private vulnerability reporting
-   (*Security* → *Report a vulnerability*) on this repository, **or**
+1. Use [GitHub's private vulnerability reporting](https://github.com/rosch100/kchat/security/advisories/new)
+   on this repository, **or**
 2. Open a GitHub issue asking for a private channel, and we will follow up.
+
+We acknowledge vulnerability reports within 7 days and provide an initial
+assessment within 14 days. Confirmed vulnerabilities are fixed and disclosed
+coordinately with the reporter; timelines depend on severity and release
+complexity.
 
 ## Scope
 
