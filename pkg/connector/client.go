@@ -44,12 +44,15 @@ type KChatClient struct {
 	userLogin   *bridgev2.UserLogin
 	eventSender remoteEventSender
 
-	client    *model.Client4
-	wsSocket  *pusherSocket
-	echo      *echoTracker
-	userID    string
-	teamID    string
-	serverURL string
+	client   *model.Client4
+	wsSocket *pusherSocket
+	echo     *echoTracker
+	userID   string
+
+	pollMu         sync.Mutex
+	pollWatermarks map[string]*channelWatermark
+	teamID         string
+	serverURL      string
 
 	stopOnce sync.Once
 	stopChan chan struct{}
@@ -162,6 +165,12 @@ func (m *KChatClient) Connect(ctx context.Context) {
 	m.userLogin.BridgeState.Send(status.BridgeState{
 		StateEvent: status.StateConnected,
 	})
+
+	// Start the post poller (server-side broadcasts are unreliable on kChat).
+	if m.pollWatermarks == nil {
+		m.pollWatermarks = make(map[string]*channelWatermark)
+	}
+	go m.pollLoop(ctx)
 
 	// Sync existing channels to create portal rooms in Matrix.
 	go m.syncChannels(ctx)
@@ -285,6 +294,7 @@ func (m *KChatClient) syncChannels(ctx context.Context) {
 			Str("channel_type", string(ch.Type)).
 			Msg("Syncing channel")
 		m.SubscribeChannel(ch.Id)
+		m.registerPolledChannel(ctx, ch.Id)
 
 		members, _, err := m.client.GetChannelMembers(ctx, ch.Id, 0, 200, "")
 		if err != nil {

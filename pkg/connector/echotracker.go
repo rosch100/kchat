@@ -35,6 +35,10 @@ func newEchoTracker() *echoTracker {
 }
 
 const (
+	echoKindRelayPost = "mp"
+	echoKindRelayEdit = "me"
+	echoKindRelayDel  = "md"
+
 	echoKindPost       = "p"
 	echoKindDelete     = "d"
 	echoKindEdit       = "e"
@@ -67,6 +71,28 @@ func (t *echoTracker) seen(kind, key string) bool {
 	}
 	delete(t.marks, full)
 	return time.Since(ts) <= t.maxAge
+}
+
+// mark records a relayed remote object without consuming it.
+func (t *echoTracker) mark(kind, key string) {
+	if t == nil {
+		return
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.cleanupLocked()
+	t.marks[kind+":"+key] = time.Now()
+}
+
+// has reports whether the key was marked, without consuming the entry.
+func (t *echoTracker) has(kind, key string) bool {
+	if t == nil {
+		return false
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	ts, ok := t.marks[kind+":"+key]
+	return ok && time.Since(ts) <= t.maxAge
 }
 
 func (t *echoTracker) cleanupLocked() {
@@ -103,4 +129,18 @@ func (m *KChatClient) seenEcho(kind, key string) bool {
 func safeAddPendingToIgnore(msg *bridgev2.MatrixMessage, txnID networkid.TransactionID) {
 	defer func() { _ = recover() }()
 	msg.AddPendingToIgnore(txnID)
+}
+
+func (m *KChatClient) markRelayed(kind, key string) {
+	if m.echo == nil {
+		m.echo = newEchoTracker()
+	}
+	m.echo.mark(kind, key)
+}
+
+func (m *KChatClient) hasRelayed(kind, key string) bool {
+	if m.echo == nil {
+		return false
+	}
+	return m.echo.has(kind, key)
 }

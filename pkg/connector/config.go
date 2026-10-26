@@ -29,6 +29,11 @@ type Config struct {
 	// the /api/reload-puppets endpoint. Defaults to ":29320".
 	AdminAPIAddr string `yaml:"admin_api_addr"`
 
+	// PollInterval is the seconds between channel post polls. kChat's
+	// realtime broadcasts for posts are unreliable, so polling is the
+	// primary message transport. Set to 0 to disable polling.
+	PollInterval int `yaml:"poll_interval"`
+
 	BackfillEnabled  bool `yaml:"backfill_enabled"`
 	BackfillMaxCount int  `yaml:"backfill_max_count"`
 	TypingTimeout    int  `yaml:"typing_timeout"`
@@ -63,6 +68,7 @@ func upgradeConfig(helper up.Helper) {
 	helper.Copy(up.Bool, "backfill_enabled")
 	helper.Copy(up.Int, "backfill_max_count")
 	helper.Copy(up.Int, "typing_timeout")
+	helper.Copy(up.Int, "poll_interval")
 }
 
 func (mc *KChatConnector) GetConfig() (example string, data any, upgrader up.Upgrader) {

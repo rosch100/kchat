@@ -23,3 +23,6 @@ backfill_max_count: 100
 
 # Typing indicator timeout in seconds.
 typing_timeout: 5
+
+# Seconds between channel post polls (kChat broadcasts posts unreliably).
+poll_interval: 5
