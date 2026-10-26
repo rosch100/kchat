@@ -110,6 +110,7 @@ jobs:
           context: .
           platforms: linux/${{ matrix.goarch }}
           push: true
+          provenance: false
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
