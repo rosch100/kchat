@@ -55,9 +55,9 @@ make build
 ## Login
 
 1. Start a chat with the bridge bot (`@matrix-kchatbot:your.server` or `@sh-kchatbot:beeper.local`).
-2. Send `login` and choose the flow:
-   - **Personal Access Token** (recommended): enter your kChat server URL (`https://your-team.kchat.infomaniak.com`) and the token.
-   - **Password**: enter server URL, username and password.
+2. Send `login`, then enter your kChat server URL (`https://your-team.kchat.infomaniak.com`)
+   and a personal access token (kChat has no password login route; tokens are created
+   in kChat under Account Settings -> Security -> Personal Access Tokens).
 
 ## kChat specifics
 
