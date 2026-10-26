@@ -43,6 +43,10 @@ docker run -d --name matrix-kchat \
 
 On first start the container writes `config.yaml` to `/data`; edit it, then restart the container. See the configuration section below.
 
+## Team onboarding
+
+Team members of a kChat workspace (e.g. my-team): see the German step-by-step guide in [docs/team-onboarding.md](docs/team-onboarding.md) for setting up your own bridge instance on the shared server.
+
 ## Setup with Beeper (bridge-manager)
 
 1. Clone this repository and build and install [bbctl](https://github.com/beeper/bridge-manager):
