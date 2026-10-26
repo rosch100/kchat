@@ -55,6 +55,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
+          pattern: matrix-kchat-*
           merge-multiple: true
 
       - name: Checksums
@@ -116,7 +117,7 @@ jobs:
       - name: Export digest
         run: |
           mkdir -p /tmp/digests
-          echo "${{ steps.build.outputs.digest }}" > "/tmp/digests/${{ matrix.goarch }}"
+          echo "${{ steps.build.outputs.digest }}" | tr -d '[:space:]' > "/tmp/digests/${{ matrix.goarch }}"
 
       - name: Upload digest
         uses: actions/upload-artifact@v4
@@ -153,7 +154,10 @@ jobs:
         working-directory: /tmp/digests
         run: |
           REF="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
-          DIGESTS=$(printf "$REF@sha256:%s " *)
+          DIGESTS=""
+          for f in *; do
+            DIGESTS="$DIGESTS $REF@sha256:$(cat "$f" | tr -d '[:space:]')"
+          done
           VERSION="${{ github.ref_name }}"
           docker manifest create "$REF:$VERSION" $DIGESTS
           docker manifest create "$REF:0.1" $DIGESTS
