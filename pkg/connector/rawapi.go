@@ -109,6 +109,29 @@ func rawGetUser(ctx context.Context, client *model.Client4, userID string) (*mod
 	return user, nil
 }
 
+// rawGetPosts fetches a PostList (channel history) with PHP quirks fixed:
+// an empty posts map arrives as [] from kChat.
+func rawGetPosts(ctx context.Context, client *model.Client4, path string) (*model.PostList, error) {
+	data, err := rawRequest(ctx, client, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var doc map[string]any
+	if err := json.Unmarshal(data, &doc); err != nil {
+		return nil, fmt.Errorf("failed to parse posts response: %w", err)
+	}
+	fixPHPObjectArrays(doc)
+	cleaned, err := json.Marshal(doc)
+	if err != nil {
+		return nil, err
+	}
+	list := &model.PostList{}
+	if err := json.Unmarshal(cleaned, list); err != nil {
+		return nil, fmt.Errorf("failed to decode posts response: %w", err)
+	}
+	return list, nil
+}
+
 // rawCreatePost creates a post and decodes the response with PHP quirks fixed.
 // kChat's validation is stricter than Mattermost's:
 //   - file_ids must be present as an array

@@ -36,18 +36,15 @@ func (m *KChatClient) FetchMessages(ctx context.Context, params bridgev2.FetchMe
 		perPage = 200
 	}
 
-	var postList *model.PostList
-	var err error
-
+	var path string
 	if params.Forward && params.AnchorMessage != nil {
-		anchorPostID := ParseMessageID(params.AnchorMessage.ID)
-		postList, _, err = m.client.GetPostsAfter(ctx, channelID, anchorPostID, 0, perPage, "", false, false)
+		path = fmt.Sprintf("/channels/%s/posts?after=%s&per_page=%d", channelID, ParseMessageID(params.AnchorMessage.ID), perPage)
 	} else if params.AnchorMessage != nil {
-		anchorPostID := ParseMessageID(params.AnchorMessage.ID)
-		postList, _, err = m.client.GetPostsBefore(ctx, channelID, anchorPostID, 0, perPage, "", false, false)
+		path = fmt.Sprintf("/channels/%s/posts?before=%s&per_page=%d", channelID, ParseMessageID(params.AnchorMessage.ID), perPage)
 	} else {
-		postList, _, err = m.client.GetPostsForChannel(ctx, channelID, 0, perPage, "", false, false)
+		path = fmt.Sprintf("/channels/%s/posts?per_page=%d", channelID, perPage)
 	}
+	postList, err := rawGetPosts(ctx, m.client, path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch posts for backfill: %w", err)
 	}
