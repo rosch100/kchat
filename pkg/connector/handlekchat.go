@@ -34,6 +34,10 @@ func (m *KChatClient) senderFor(mmUserID string) bridgev2.EventSender {
 	return sender
 }
 
+// kchatEventChannelViewed is the "channel_viewed" event name. kChat still
+// sends it, but the constant was removed from the Mattermost SDK in v0.5.0.
+const kchatEventChannelViewed model.WebsocketEventType = "channel_viewed"
+
 // handleEvent dispatches a kChat WebSocket event to the appropriate handler.
 func (m *KChatClient) handleEvent(evt *model.WebSocketEvent) {
 	switch evt.EventType() {
@@ -49,7 +53,7 @@ func (m *KChatClient) handleEvent(evt *model.WebSocketEvent) {
 		m.handleReactionRemoved(evt)
 	case model.WebsocketEventTyping:
 		m.handleTyping(evt)
-	case model.WebsocketEventChannelViewed:
+	case kchatEventChannelViewed:
 		m.handleChannelViewed(evt)
 	default:
 		m.log.Trace().Str("event_type", string(evt.EventType())).Msg("Unhandled event type")

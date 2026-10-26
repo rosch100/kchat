@@ -378,7 +378,7 @@ func TestHandleEvent_Dispatch(t *testing.T) {
 		{"reaction_added", model.WebsocketEventReactionAdded, map[string]any{"reaction": string(reactionJSON)}},
 		{"reaction_removed", model.WebsocketEventReactionRemoved, map[string]any{"reaction": string(reactionJSON)}},
 		{"typing", model.WebsocketEventTyping, map[string]any{"user_id": "my-user-id"}},
-		{"channel_viewed", model.WebsocketEventChannelViewed, map[string]any{}},
+		{"channel_viewed", kchatEventChannelViewed, map[string]any{}},
 		{"unknown_type", "unknown_custom_event", map[string]any{}},
 	}
 
@@ -1079,7 +1079,7 @@ func TestHandleChannelViewed_MissingData(t *testing.T) {
 	t.Parallel()
 	mc := newFullTestClient("http://localhost")
 	mock := testMock(mc)
-	evt := newWebSocketEvent(model.WebsocketEventChannelViewed, "ch1", map[string]any{})
+	evt := newWebSocketEvent(kchatEventChannelViewed, "ch1", map[string]any{})
 
 	mc.handleChannelViewed(evt)
 
@@ -1092,7 +1092,7 @@ func TestHandleChannelViewed_PassesChecks(t *testing.T) {
 	t.Parallel()
 	mc := newFullTestClient("http://localhost")
 	mock := testMock(mc)
-	evt := newWebSocketEvent(model.WebsocketEventChannelViewed, "ch1", map[string]any{
+	evt := newWebSocketEvent(kchatEventChannelViewed, "ch1", map[string]any{
 		"channel_id": "ch1",
 	})
 
@@ -1354,7 +1354,7 @@ func TestParseTypingEvent_MissingUserID(t *testing.T) {
 func TestParseChannelViewedEvent_Valid(t *testing.T) {
 	t.Parallel()
 	mc := newFullTestClient("http://localhost")
-	evt := newWebSocketEvent(model.WebsocketEventChannelViewed, "ch1", map[string]any{
+	evt := newWebSocketEvent(kchatEventChannelViewed, "ch1", map[string]any{
 		"channel_id": "ch1",
 	})
 
@@ -1370,7 +1370,7 @@ func TestParseChannelViewedEvent_Valid(t *testing.T) {
 func TestParseChannelViewedEvent_MissingData(t *testing.T) {
 	t.Parallel()
 	mc := newFullTestClient("http://localhost")
-	evt := newWebSocketEvent(model.WebsocketEventChannelViewed, "ch1", map[string]any{})
+	evt := newWebSocketEvent(kchatEventChannelViewed, "ch1", map[string]any{})
 
 	_, ok := mc.parseChannelViewedEvent(evt)
 	if ok {
@@ -1739,7 +1739,7 @@ func TestParseChannelViewedEvent_EmptyChannelID(t *testing.T) {
 	// If channel_id is present but empty string, it passes the type assertion.
 	// This documents current behavior — an empty channel ID will be queued.
 	mc := newFullTestClient("http://localhost")
-	evt := newWebSocketEvent(model.WebsocketEventChannelViewed, "ch1", map[string]any{
+	evt := newWebSocketEvent(kchatEventChannelViewed, "ch1", map[string]any{
 		"channel_id": "",
 	})
 
@@ -1757,7 +1757,7 @@ func TestParseChannelViewedEvent_EmptyChannelID(t *testing.T) {
 func TestParseChannelViewedEvent_NonStringChannelID(t *testing.T) {
 	t.Parallel()
 	mc := newFullTestClient("http://localhost")
-	evt := newWebSocketEvent(model.WebsocketEventChannelViewed, "ch1", map[string]any{
+	evt := newWebSocketEvent(kchatEventChannelViewed, "ch1", map[string]any{
 		"channel_id": 12345,
 	})
 
