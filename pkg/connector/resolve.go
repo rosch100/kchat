@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -96,7 +97,7 @@ func (m *KChatClient) lookupUser(ctx context.Context, identifier string) (*model
 
 // searchUsers calls the kChat user search endpoint.
 func (m *KChatClient) searchUsers(ctx context.Context, term string) ([]*model.User, error) {
-	data, err := rawRequest(ctx, m.client, http.MethodGet, "/users?search="+urlQueryEscape(term), nil)
+	data, err := rawRequest(ctx, m.client, http.MethodGet, "/users?search="+url.QueryEscape(term), nil)
 	if err != nil {
 		return nil, fmt.Errorf("user search failed: %w", err)
 	}
@@ -153,21 +154,6 @@ func (m *KChatClient) createDirectChannel(ctx context.Context, otherUserID strin
 // userInfoFromUser converts a kChat user to bridgev2 UserInfo.
 func (m *KChatClient) userInfoFromUser(user *model.User) *bridgev2.UserInfo {
 	return m.mmUserToUserInfo(user)
-}
-
-func urlQueryEscape(s string) string {
-	return strings.ReplaceAll(strings.ReplaceAll(s, "%", "%25"), " ", "%20")
-}
-
-// handleChannelViewedReceipt relays a channel_viewed event for the logged-in
-// user as a read receipt into Matrix.
-func (m *KChatClient) handleChannelViewedReceipt(ctx context.Context, channelID string) {
-	members, _, err := m.client.GetChannelMembers(ctx, channelID, 0, 200, "")
-	if err != nil {
-		m.log.Warn().Err(err).Str("channel_id", channelID).Msg("Failed to fetch members for read receipt")
-		return
-	}
-	m.relayReadReceipts(ctx, channelID, members)
 }
 
 // relayReadReceipts compares member last_viewed_at values with the tracked

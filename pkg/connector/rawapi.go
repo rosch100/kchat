@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/mattermost/mattermost/server/public/model"
 )
@@ -56,6 +57,10 @@ func fixPHPObjectArrays(v any) {
 	}
 }
 
+// rawHTTPClient bounds raw API calls so a stalled kChat backend cannot hang
+// the poller or message sends.
+var rawHTTPClient = &http.Client{Timeout: 30 * time.Second}
+
 // rawRequest performs an authenticated GET/POST against the API URL and
 // returns the response body after applying fixPHPObjectArrays.
 func rawRequest(ctx context.Context, client *model.Client4, method, path string, body []byte) ([]byte, error) {
@@ -67,7 +72,7 @@ func rawRequest(ctx context.Context, client *model.Client4, method, path string,
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := rawHTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

@@ -190,6 +190,7 @@ func (m *KChatClient) connectWebSocket() error {
 	}
 	socket.setPendingChannels(m.teamID, m.userID)
 	m.wsSocket = socket
+	go m.listenWebSocket()
 	go func() {
 		if err := socket.Listen(); err != nil {
 			m.log.Error().Err(err).Msg("WebSocket connection failed")
