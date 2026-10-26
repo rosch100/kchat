@@ -46,15 +46,15 @@ func TestDisconnect_DoubleSafe(t *testing.T) {
 	mc.Disconnect() // second call should not panic
 }
 
-// TestDisconnect_NilWsClient verifies Disconnect handles nil wsClient gracefully.
+// TestDisconnect_NilWsClient verifies Disconnect handles nil wsSocket gracefully.
 func TestDisconnect_NilWsClient(t *testing.T) {
 	t.Parallel()
 	fake := newFakeMM()
 	t.Cleanup(fake.Close)
 
 	mc := newFullTestClient(fake.Server.URL)
-	mc.wsClient = nil
-	mc.Disconnect() // should not panic with nil wsClient
+	mc.wsSocket = nil
+	mc.Disconnect() // should not panic with nil wsSocket
 }
 
 // TestLogoutRemote_CallsLogout verifies that LogoutRemote calls the logout endpoint.
