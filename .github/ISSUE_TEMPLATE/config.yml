@@ -1,7 +1,7 @@
 blank_issues_enabled: true
 contact_links:
   - name: Documentation
-    url: https://git.altanis.de/rosch/kchat#readme
+    url: https://github.com/rosch100/kchat#readme
     about: Check the README for setup and configuration help
   - name: Beeper Self-Hosting
     url: https://matrix.to/#/#self-hosting:beeper.com

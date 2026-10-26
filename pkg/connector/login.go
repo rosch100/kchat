@@ -51,7 +51,7 @@ var _ bridgev2.LoginProcessUserInput = (*TokenLoginProcess)(nil)
 func (t *TokenLoginProcess) Start(_ context.Context) (*bridgev2.LoginStep, error) {
 	return &bridgev2.LoginStep{
 		Type:         bridgev2.LoginStepTypeUserInput,
-		StepID:       "ch.altanis.kchat.login.server_url",
+		StepID:       "io.github.rosch100.kchat.login.server_url",
 		Instructions: "Enter your kChat server URL (e.g., https://your-team.kchat.infomaniak.com)",
 		UserInputParams: &bridgev2.LoginUserInputParams{
 			Fields: []bridgev2.LoginInputDataField{
@@ -70,7 +70,7 @@ func (t *TokenLoginProcess) SubmitUserInput(ctx context.Context, input map[strin
 		t.serverURL = serverURL
 		return &bridgev2.LoginStep{
 			Type:         bridgev2.LoginStepTypeUserInput,
-			StepID:       "ch.altanis.kchat.login.token",
+			StepID:       "io.github.rosch100.kchat.login.token",
 			Instructions: "Enter your kChat personal access token",
 			UserInputParams: &bridgev2.LoginUserInputParams{
 				Fields: []bridgev2.LoginInputDataField{
@@ -127,7 +127,7 @@ func (t *TokenLoginProcess) finishLogin(ctx context.Context, serverURL, token st
 
 	return &bridgev2.LoginStep{
 		Type:         bridgev2.LoginStepTypeComplete,
-		StepID:       "ch.altanis.kchat.login.complete",
+		StepID:       "io.github.rosch100.kchat.login.complete",
 		Instructions: fmt.Sprintf("Logged in as %s on %s", result.User.Username, serverURL),
 		CompleteParams: &bridgev2.LoginCompleteParams{
 			UserLoginID: loginID,

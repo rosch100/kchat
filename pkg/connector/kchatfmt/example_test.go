@@ -8,7 +8,7 @@ package kchatfmt_test
 import (
 	"fmt"
 
-	"git.altanis.de/rosch/kchat/pkg/connector/kchatfmt"
+	"github.com/rosch100/kchat/pkg/connector/kchatfmt"
 )
 
 func ExampleParse() {

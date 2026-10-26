@@ -1,5 +1,5 @@
 BINARY_NAME := matrix-kchat
-MODULE := git.altanis.de/rosch/kchat
+MODULE := github.com/rosch100/kchat
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 LDFLAGS := -ldflags "-s -w -X main.Tag=$(VERSION) -X main.Commit=$(COMMIT) -X 'main.BuildTime=$(shell date -Iseconds)'"

@@ -610,7 +610,7 @@ func (mc *KChatConnector) GetName() bridgev2.BridgeName {
 		NetworkURL:       "https://www.infomaniak.com/en/kchat",
 		NetworkIcon:      "mxc://maunium.net/kchat",
 		NetworkID:        "kchat",
-		BeeperBridgeType: "ch.altanis.kchat",
+		BeeperBridgeType: "io.github.rosch100.kchat",
 		DefaultPort:      29325,
 	}
 }

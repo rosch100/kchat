@@ -546,7 +546,7 @@ func (m *KChatClient) convertFileToMatrix(fileID string, partIndex int) *bridgev
 			},
 		},
 		Extra: map[string]any{
-			"ch.altanis.kchat.file_id": fileID,
+			"io.github.rosch100.kchat.file_id": fileID,
 		},
 	}
 }

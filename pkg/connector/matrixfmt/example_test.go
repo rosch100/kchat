@@ -10,7 +10,7 @@ import (
 
 	"maunium.net/go/mautrix/event"
 
-	"git.altanis.de/rosch/kchat/pkg/connector/matrixfmt"
+	"github.com/rosch100/kchat/pkg/connector/matrixfmt"
 )
 
 func ExampleParse() {

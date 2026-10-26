@@ -81,8 +81,8 @@ func TestTokenLoginStart(t *testing.T) {
 	if step.Type != bridgev2.LoginStepTypeUserInput {
 		t.Errorf("step.Type: got %q, want %q", step.Type, bridgev2.LoginStepTypeUserInput)
 	}
-	if step.StepID != "ch.altanis.kchat.login.server_url" {
-		t.Errorf("step.StepID: got %q, want %q", step.StepID, "ch.altanis.kchat.login.server_url")
+	if step.StepID != "io.github.rosch100.kchat.login.server_url" {
+		t.Errorf("step.StepID: got %q, want %q", step.StepID, "io.github.rosch100.kchat.login.server_url")
 	}
 	if step.UserInputParams == nil {
 		t.Fatal("step.UserInputParams should not be nil")
@@ -110,8 +110,8 @@ func TestTokenSubmitUserInput_ServerURL(t *testing.T) {
 	if tp.serverURL != "https://mm.example.com" {
 		t.Errorf("serverURL: got %q, want %q", tp.serverURL, "https://mm.example.com")
 	}
-	if step.StepID != "ch.altanis.kchat.login.token" {
-		t.Errorf("step.StepID: got %q, want %q", step.StepID, "ch.altanis.kchat.login.token")
+	if step.StepID != "io.github.rosch100.kchat.login.token" {
+		t.Errorf("step.StepID: got %q, want %q", step.StepID, "io.github.rosch100.kchat.login.token")
 	}
 	if step.Type != bridgev2.LoginStepTypeUserInput {
 		t.Errorf("step.Type: got %q, want %q", step.Type, bridgev2.LoginStepTypeUserInput)

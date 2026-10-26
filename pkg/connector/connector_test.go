@@ -36,8 +36,8 @@ func TestGetName(t *testing.T) {
 	if name.NetworkURL != "https://www.infomaniak.com/en/kchat" {
 		t.Errorf("NetworkURL: got %q, want %q", name.NetworkURL, "https://www.infomaniak.com/en/kchat")
 	}
-	if name.BeeperBridgeType != "ch.altanis.kchat" {
-		t.Errorf("BeeperBridgeType: got %q, want %q", name.BeeperBridgeType, "ch.altanis.kchat")
+	if name.BeeperBridgeType != "io.github.rosch100.kchat" {
+		t.Errorf("BeeperBridgeType: got %q, want %q", name.BeeperBridgeType, "io.github.rosch100.kchat")
 	}
 }
 

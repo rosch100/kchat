@@ -10,7 +10,7 @@
 package main
 
 import (
-	"git.altanis.de/rosch/kchat/pkg/connector"
+	"github.com/rosch100/kchat/pkg/connector"
 	"maunium.net/go/mautrix/bridgev2/matrix/mxmain"
 )
 
@@ -23,7 +23,7 @@ var (
 
 var m = mxmain.BridgeMain{
 	Name:        "matrix-kchat",
-	URL:         "https://git.altanis.de/rosch/kchat",
+	URL:         "https://github.com/rosch100/kchat",
 	Description: "A Matrix-kChat bridge",
 	Version:     "0.1.0",
 

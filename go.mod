@@ -1,4 +1,4 @@
-module git.altanis.de/rosch/kchat
+module github.com/rosch100/kchat
 
 go 1.26.0
 
