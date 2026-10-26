@@ -89,10 +89,9 @@ func (m *KChatClient) lookupUser(ctx context.Context, identifier string) (*model
 			return u, nil
 		}
 	}
-	if len(users) == 1 {
-		return users[0], nil
-	}
-	return nil, fmt.Errorf("no unique kChat user found for %q (%d matches)", identifier, len(users))
+	// No single-candidate fallback: fuzzy prefix hits (e.g. "bob" -> "bobby")
+	// must not open DMs with the wrong person. Fuzzy lookup is SearchUsers' job.
+	return nil, fmt.Errorf("no exact kChat user match for %q (%d candidates)", identifier, len(users))
 }
 
 // searchUsers calls the kChat user search endpoint.

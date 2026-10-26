@@ -45,12 +45,17 @@ type KChatClient struct {
 	eventSender remoteEventSender
 
 	client   *model.Client4
+	wsMu     sync.Mutex
 	wsSocket *pusherSocket
 	echo     *echoTracker
 	userID   string
 
-	pollMu         sync.Mutex
-	pollWatermarks map[string]*channelWatermark
+	pollMu            sync.Mutex
+	pollWatermarks    map[string]*channelWatermark
+	baselineMu        sync.Mutex
+	baselinedChannels map[string]bool
+	realtimeMu        sync.Mutex
+	realtimeChannels  map[string]bool
 
 	readReceiptMu    sync.Mutex
 	readReceiptMarks map[string]map[string]time.Time
@@ -156,19 +161,22 @@ func (m *KChatClient) Connect(ctx context.Context) {
 		}
 	}
 
-	if err := m.connectWebSocket(); err != nil {
-		m.log.Error().Err(err).Msg("WebSocket connection failed")
+	// The realtime socket is best-effort: message transport is the poller,
+	// so a socket failure must not block the poller or channel sync.
+	if m.teamID == "" {
+		m.log.Warn().Msg("No team ID; realtime socket unavailable, relying on polling")
+	} else if err := m.connectWebSocket(); err != nil {
+		m.log.Error().Err(err).Msg("WebSocket connection failed; relying on polling")
 		m.userLogin.BridgeState.Send(status.BridgeState{
 			StateEvent: status.StateTransientDisconnect,
 			Error:      "mm-ws-failed",
-			Message:    "WebSocket connection failed",
+			Message:    "Realtime socket failed; using polling",
 		})
-		return
+	} else {
+		m.userLogin.BridgeState.Send(status.BridgeState{
+			StateEvent: status.StateConnected,
+		})
 	}
-
-	m.userLogin.BridgeState.Send(status.BridgeState{
-		StateEvent: status.StateConnected,
-	})
 
 	// Start the post poller (server-side broadcasts are unreliable on kChat).
 	if m.pollWatermarks == nil {
@@ -189,10 +197,19 @@ func (m *KChatClient) connectWebSocket() error {
 		return fmt.Errorf("failed to create websocket client: %w", err)
 	}
 	socket.setPendingChannels(m.teamID, m.userID)
+	socket.setExtraChannels(m.realtimeChannelIDs())
+	m.wsMu.Lock()
 	m.wsSocket = socket
-	go m.listenWebSocket()
+	m.wsMu.Unlock()
+	go m.listenWebSocket(socket)
 	go func() {
 		if err := socket.Listen(); err != nil {
+			select {
+			case <-m.stopChan:
+				// Intentional shutdown: do not reconnect.
+				return
+			default:
+			}
 			m.log.Error().Err(err).Msg("WebSocket connection failed")
 			m.handleWebSocketDisconnect()
 		}
@@ -212,12 +229,14 @@ func httpToWS(url string) string {
 	return url
 }
 
-func (m *KChatClient) listenWebSocket() {
+// listenWebSocket consumes events from one specific socket instance and
+// exits when that socket's event channel closes (e.g. on reconnect).
+func (m *KChatClient) listenWebSocket(socket *pusherSocket) {
 	for {
 		select {
 		case <-m.stopChan:
 			return
-		case event, ok := <-m.wsSocket.EventChannel:
+		case event, ok := <-socket.EventChannel:
 			if !ok {
 				m.log.Warn().Msg("WebSocket event channel closed, reconnecting")
 				m.handleWebSocketDisconnect()
@@ -228,6 +247,37 @@ func (m *KChatClient) listenWebSocket() {
 			}
 			m.handleEvent(event)
 		}
+	}
+}
+
+// realtimeChannelIDs returns the channel IDs subscribed on the realtime
+// socket (re-applied on every reconnect).
+func (m *KChatClient) realtimeChannelIDs() []string {
+	m.realtimeMu.Lock()
+	defer m.realtimeMu.Unlock()
+	ids := make([]string, 0, len(m.realtimeChannels))
+	for id := range m.realtimeChannels {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+// SubscribeChannel registers a channel for realtime events and subscribes it
+// on the current socket if one is connected.
+func (m *KChatClient) SubscribeChannel(channelID string) {
+	m.realtimeMu.Lock()
+	if m.realtimeChannels == nil {
+		m.realtimeChannels = make(map[string]bool)
+	}
+	_, known := m.realtimeChannels[channelID]
+	m.realtimeChannels[channelID] = true
+	m.realtimeMu.Unlock()
+
+	m.wsMu.Lock()
+	ws := m.wsSocket
+	m.wsMu.Unlock()
+	if ws != nil && !known {
+		ws.subscribeChannel("presence-channel." + channelID)
 	}
 }
 
@@ -250,13 +300,6 @@ func (m *KChatClient) handleWebSocketDisconnect() {
 			StateEvent: status.StateConnected,
 		})
 	}
-}
-
-// SubscribeChannel subscribes the realtime socket to a single kChat channel
-// so posts in it are received (kChat broadcasts per-channel events on
-// presence-channel.<id>).
-func (m *KChatClient) SubscribeChannel(channelID string) {
-	m.wsSocket.subscribeChannel("presence-channel." + channelID)
 }
 
 // syncChannels fetches all kChat channels the user is a member of
@@ -345,10 +388,12 @@ func (m *KChatClient) Disconnect() {
 	m.stopOnce.Do(func() {
 		close(m.stopChan)
 	})
+	m.wsMu.Lock()
 	if m.wsSocket != nil {
 		_ = m.wsSocket.conn.Close()
 		m.wsSocket = nil
 	}
+	m.wsMu.Unlock()
 }
 
 // IsLoggedIn reports whether the client holds a valid authentication token.

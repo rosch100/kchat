@@ -45,10 +45,11 @@ type pusherSocket struct {
 	httpClient *http.Client
 	log        zerolog.Logger
 
-	writeMu            sync.Mutex
-	pendingChannel     []string
-	pendingChannelData map[string]string
-	subscribed         bool
+	writeMu        sync.Mutex
+	stateMu        sync.Mutex
+	pendingChannel []string
+	extraChannels  []string
+	subscribed     bool
 
 	// EventChannel receives normalized model.WebSocketEvent values.
 	EventChannel chan *model.WebSocketEvent
@@ -123,7 +124,9 @@ func (p *pusherSocket) Listen() error {
 // pingLoop keeps the socket alive: pusher servers close connections that
 // stay silent for activity_timeout (close code 4201).
 func (p *pusherSocket) pingLoop() {
+	p.stateMu.Lock()
 	interval := p.activityTimeout / 2
+	p.stateMu.Unlock()
 	if interval < 5*time.Second {
 		interval = 5 * time.Second
 	}
@@ -158,7 +161,10 @@ func (p *pusherSocket) subscribeAfterConnect() {
 			time.Sleep(50 * time.Millisecond)
 		}
 	}
-	for _, channel := range p.pendingChannel {
+	p.stateMu.Lock()
+	channels := append(append([]string{}, p.pendingChannel...), p.extraChannels...)
+	p.stateMu.Unlock()
+	for _, channel := range channels {
 		if err := p.subscribe(channel); err != nil {
 			// Presence channels may be denied by kChat's broadcasting policy;
 			// message events arrive on the team channel, so this is not fatal.
@@ -166,8 +172,10 @@ func (p *pusherSocket) subscribeAfterConnect() {
 			continue
 		}
 	}
+	p.stateMu.Lock()
 	p.subscribed = true
-	p.log.Info().Strs("channels", p.pendingChannel).Msg("Subscribed to kChat realtime channels")
+	p.stateMu.Unlock()
+	p.log.Info().Strs("channels", channels).Msg("Subscribed to kChat realtime channels")
 }
 
 // setPendingChannels queues the channels to subscribe after the handshake.
@@ -179,13 +187,40 @@ func (p *pusherSocket) setPendingChannels(teamID, userID string) {
 	}
 }
 
-// subscribeChannel subscribes to an additional channel after the initial
-// handshake (e.g. per-channel presence subscriptions for synced channels).
+// subscribeChannel subscribes to an additional channel. If the handshake has
+// not completed yet, the request is queued and replayed afterwards so
+// subscriptions requested during startup are never lost.
 func (p *pusherSocket) subscribeChannel(channel string) {
-	if p == nil || p.socketID == "" {
+	if p == nil {
 		return
 	}
-	p.subscribe(channel)
+	p.stateMu.Lock()
+	ready := p.socketID != ""
+	if !ready {
+		p.extraChannels = append(p.extraChannels, channel)
+	}
+	p.stateMu.Unlock()
+	if ready {
+		p.subscribe(channel)
+	}
+}
+
+// setExtraChannels queues channels to subscribe after the handshake
+// (re-applied by the caller on every reconnect).
+func (p *pusherSocket) setExtraChannels(channelIDs []string) {
+	if p == nil || len(channelIDs) == 0 {
+		return
+	}
+	p.stateMu.Lock()
+	p.extraChannels = append(p.extraChannels, channelIDs...)
+	channels := append([]string{}, p.extraChannels...)
+	ready := p.socketID != ""
+	p.stateMu.Unlock()
+	if ready {
+		for _, ch := range channels {
+			p.subscribe(ch)
+		}
+	}
 }
 
 // subscribe exchanges socket_id and channel_name for a signed subscription
@@ -211,8 +246,11 @@ func (p *pusherSocket) subscribe(channel string) error {
 
 // authorizeChannel requests the signed auth string for a channel.
 func (p *pusherSocket) authorizeChannel(channel string) (auth, channelData string, err error) {
+	p.stateMu.Lock()
+	socketID := p.socketID
+	p.stateMu.Unlock()
 	form := url.Values{
-		"socket_id":    {p.socketID},
+		"socket_id":    {socketID},
 		"channel_name": {channel},
 	}
 	req, reqErr := http.NewRequest(http.MethodPost, p.serverURL+"/broadcasting/auth", strings.NewReader(form.Encode()))

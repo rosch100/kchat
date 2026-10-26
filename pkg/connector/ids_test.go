@@ -158,10 +158,8 @@ func TestMakePortalKey(t *testing.T) {
 	if string(key.ID) != "ch-test" {
 		t.Errorf("makePortalKey ID: got %q, want %q", key.ID, "ch-test")
 	}
-	if key.Receiver != "" {
-		if key.Receiver != "test-login" {
-			t.Errorf("makePortalKey Receiver: got %q, want %q", key.Receiver, "test-login")
-		}
+	if key.Receiver != "test-login" {
+		t.Errorf("makePortalKey Receiver: got %q, want %q", key.Receiver, "test-login")
 	}
 }
 
