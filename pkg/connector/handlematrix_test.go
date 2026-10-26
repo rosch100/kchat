@@ -777,10 +777,11 @@ func TestHandleMatrixReadReceipt_Success(t *testing.T) {
 	}
 }
 
-func TestHandleMatrixReadReceipt_APIError(t *testing.T) {
+func TestHandleMatrixReadReceipt_NoRouteIsNoOp(t *testing.T) {
 	fm := newFakeMM()
 	defer fm.Close()
 
+	// kChat has no mark-read API route; the handler must be a no-op.
 	fm.FailEndpoints["/members/"] = true
 
 	mc := newFullTestClient(fm.Server.URL)
@@ -790,8 +791,8 @@ func TestHandleMatrixReadReceipt_APIError(t *testing.T) {
 	}
 
 	err := mc.HandleMatrixReadReceipt(context.Background(), msg)
-	if err == nil {
-		t.Fatal("expected error when ViewChannel fails, got nil")
+	if err != nil {
+		t.Fatalf("expected nil error (no-op), got: %v", err)
 	}
 }
 

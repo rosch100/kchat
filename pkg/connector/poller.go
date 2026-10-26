@@ -83,7 +83,8 @@ func (m *KChatClient) pollLoop(ctx context.Context) {
 	}
 }
 
-// pollOnce polls every registered channel once.
+// pollOnce polls every registered channel once. Member (read receipt) state
+// is polled at a lower rate to stay within the kChat API rate limit.
 func (m *KChatClient) pollOnce(ctx context.Context) {
 	m.pollMu.Lock()
 	channels := make([]string, 0, len(m.pollWatermarks))
@@ -91,6 +92,15 @@ func (m *KChatClient) pollOnce(ctx context.Context) {
 		channels = append(channels, id)
 	}
 	m.pollMu.Unlock()
+
+	memberTick := m.connector.Config.PollInterval * 4
+	if memberTick < 15 {
+		memberTick = 15
+	}
+	pollMembers := time.Since(m.lastMemberPoll) >= time.Duration(memberTick)*time.Second
+	if pollMembers {
+		m.lastMemberPoll = time.Now()
+	}
 
 	for _, channelID := range channels {
 		select {
@@ -102,6 +112,13 @@ func (m *KChatClient) pollOnce(ctx context.Context) {
 		}
 		if err := m.pollChannel(ctx, channelID); err != nil {
 			m.log.Warn().Err(err).Str("channel_id", channelID).Msg("Channel poll failed")
+		}
+		if pollMembers {
+			if members, _, err := m.client.GetChannelMembers(ctx, channelID, 0, 200, ""); err != nil {
+				m.log.Warn().Err(err).Str("channel_id", channelID).Msg("Failed to poll channel members")
+			} else {
+				m.relayReadReceipts(ctx, channelID, members)
+			}
 		}
 	}
 }
