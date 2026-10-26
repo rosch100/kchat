@@ -65,11 +65,16 @@ func (m *KChatClient) registerPolledChannel(ctx context.Context, channelID strin
 // pollLoop polls all registered channels until the client stops.
 func (m *KChatClient) pollLoop(ctx context.Context) {
 	interval := m.connector.Config.PollInterval
-	if interval <= 0 {
+	if interval == 0 {
+		m.log.Warn().Msg("Post polling disabled (poll_interval: 0); no messages will be relayed")
+		return
+	}
+	if interval < 0 {
 		interval = 5
 	}
 	m.log.Info().Int("interval_s", interval).Msg("Starting kChat post poller")
-	ticker := time.NewTicker(time.Duration(interval) * time.Second)
+	tickerInterval := time.Duration(interval) * time.Second
+	ticker := time.NewTicker(tickerInterval)
 	defer ticker.Stop()
 	for {
 		select {
@@ -79,6 +84,24 @@ func (m *KChatClient) pollLoop(ctx context.Context) {
 			return
 		case <-ticker.C:
 			m.pollOnce(ctx)
+			// Respect the kChat rate limit (60 req/min): stretch the tick
+			// when many channels are registered (members poll adds one more
+			// request per channel).
+			m.pollMu.Lock()
+			n := len(m.pollWatermarks)
+			m.pollMu.Unlock()
+			stretched := time.Duration(interval) * time.Second
+			if n > 1 {
+				needed := time.Duration(n) * 1500 * time.Millisecond
+				if needed > stretched {
+					stretched = needed
+				}
+			}
+			if stretched != tickerInterval {
+				tickerInterval = stretched
+				ticker.Reset(stretched)
+				m.log.Debug().Dur("interval", stretched).Int("channels", n).Msg("Adjusted poll interval")
+			}
 		}
 	}
 }
@@ -132,6 +155,37 @@ func (m *KChatClient) pollChannel(ctx context.Context, channelID string) error {
 		return fmt.Errorf("channel not registered")
 	}
 
+	m.baselineMu.Lock()
+	_, baselined := m.baselinedChannels[channelID]
+	if !baselined {
+		m.baselinedChannels[channelID] = true
+	}
+	m.baselineMu.Unlock()
+	if !baselined {
+		// First poll after (re)start with no stored watermark: establish the
+		// baseline from the newest post instead of relaying history. History
+		// delivery is the backfill path's job.
+		resp0, err := m.rawGetChannelPosts(ctx, channelID, 1)
+		if err != nil {
+			m.baselineMu.Lock()
+			delete(m.baselinedChannels, channelID)
+			m.baselineMu.Unlock()
+			return err
+		}
+		for _, post := range resp0.Posts {
+			if post.CreateAt > wm.CreateAt {
+				wm.CreateAt = post.CreateAt
+			}
+			if post.EditAt > wm.EditAt {
+				wm.EditAt = post.EditAt
+			}
+		}
+		if raw, err := json.Marshal(wm); err == nil && m.connector.Bridge.DB != nil {
+			m.connector.Bridge.DB.KV.Set(ctx, database.Key(pollerKeyPrefix+channelID), string(raw))
+		}
+		m.log.Info().Str("channel_id", channelID).Int64("baseline", wm.max()).Msg("Baselined channel watermark")
+	}
+
 	resp, err := m.rawGetChannelPosts(ctx, channelID, 50)
 	if err != nil {
 		return err
@@ -176,12 +230,14 @@ func (m *KChatClient) pollChannel(ctx context.Context, channelID string) error {
 				newCreate = post.CreateAt
 			}
 		} else if post.EditAt > wm.EditAt {
-			// Edited post.
-			if !m.seenEcho(echoKindEdit, post.Id) && !m.hasRelayed(echoKindRelayEdit, post.Id) {
+			// Edited post. Dedup keys include the edit timestamp so later
+			// edits of the same post are not swallowed by the marker window.
+			editKey := post.Id + ":" + strconv.FormatInt(post.EditAt, 10)
+			if !m.seenEcho(echoKindEdit, post.Id) && !m.hasRelayed(echoKindRelayEdit, editKey) {
 				m.relayPostEdit(ctx, post)
 				relayed++
 			}
-			m.markRelayed(echoKindRelayEdit, post.Id)
+			m.markRelayed(echoKindRelayEdit, editKey)
 			if post.EditAt > newEdit {
 				newEdit = post.EditAt
 			}
@@ -255,7 +311,6 @@ func (m *KChatClient) relayPost(ctx context.Context, post *model.Post) {
 // relayPostEdit queues a post edit as a Matrix edit event.
 func (m *KChatClient) relayPostEdit(ctx context.Context, post *model.Post) {
 	m.log.Debug().Str("post_id", post.Id).Str("channel_id", post.ChannelId).Msg("Relaying polled edit")
-	m.markRelayed(echoKindRelayEdit, post.Id)
 	m.eventSender.QueueRemoteEvent(m.userLogin, &simplevent.Message[*model.Post]{
 		EventMeta: simplevent.EventMeta{
 			Type: bridgev2.RemoteEventEdit,
@@ -266,10 +321,10 @@ func (m *KChatClient) relayPostEdit(ctx context.Context, post *model.Post) {
 			Sender:    m.senderFor(post.UserId),
 			Timestamp: time.UnixMilli(post.EditAt),
 		},
-		ID:   MakeMessageID(post.Id),
-		Data: post,
-		ConvertMessageFunc: func(ctx context.Context, portal *bridgev2.Portal, intent bridgev2.MatrixAPI, data *model.Post) (*bridgev2.ConvertedMessage, error) {
-			return m.convertPostToMatrix(data), nil
+		TargetMessage: MakeMessageID(post.Id),
+		Data:          post,
+		ConvertEditFunc: func(ctx context.Context, portal *bridgev2.Portal, intent bridgev2.MatrixAPI, existing []*database.Message, data *model.Post) (*bridgev2.ConvertedEdit, error) {
+			return m.convertEditToMatrix(data, existing), nil
 		},
 	})
 }
