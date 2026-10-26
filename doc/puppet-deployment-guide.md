@@ -57,11 +57,11 @@ MM_SERVICESETTINGS_ENABLEUSERACCESSTOKENS=true
 
 ```bash
 MM_URL="http://kchat:8065"
-MM_TOKEN="<admin-token>"
+KCHAT_TOKEN="<admin-token>"
 
 # Create the bot
 curl -s -X POST "${MM_URL}/api/v4/bots" \
-  -H "Authorization: Bearer ${MM_TOKEN}" \
+  -H "Authorization: Bearer ${KCHAT_TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{
     "username": "alice-bot",
@@ -74,14 +74,14 @@ curl -s -X POST "${MM_URL}/api/v4/bots" \
 
 ```bash
 BOT_USER_ID=$(curl -s "${MM_URL}/api/v4/users/username/alice-bot" \
-  -H "Authorization: Bearer ${MM_TOKEN}" | jq -r '.id')
+  -H "Authorization: Bearer ${KCHAT_TOKEN}" | jq -r '.id')
 ```
 
 ### Generate a personal access token
 
 ```bash
 BOT_TOKEN=$(curl -s -X POST "${MM_URL}/api/v4/users/${BOT_USER_ID}/tokens" \
-  -H "Authorization: Bearer ${MM_TOKEN}" \
+  -H "Authorization: Bearer ${KCHAT_TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{"description": "alice-bot puppet token"}' | jq -r '.token')
 ```
@@ -93,14 +93,14 @@ TEAM_ID="<your-team-id>"
 
 # Add to team
 curl -s -X POST "${MM_URL}/api/v4/teams/${TEAM_ID}/members" \
-  -H "Authorization: Bearer ${MM_TOKEN}" \
+  -H "Authorization: Bearer ${KCHAT_TOKEN}" \
   -H "Content-Type: application/json" \
   -d "{\"team_id\": \"${TEAM_ID}\", \"user_id\": \"${BOT_USER_ID}\"}"
 
 # Add to a channel
 CHANNEL_ID="<your-channel-id>"
 curl -s -X POST "${MM_URL}/api/v4/channels/${CHANNEL_ID}/members" \
-  -H "Authorization: Bearer ${MM_TOKEN}" \
+  -H "Authorization: Bearer ${KCHAT_TOKEN}" \
   -H "Content-Type: application/json" \
   -d "{\"user_id\": \"${BOT_USER_ID}\"}"
 ```
@@ -384,20 +384,20 @@ while IFS=: read -r slug display_name description || [ -n "$slug" ]; do
 
   # Create MM bot (idempotent — ignores "already exists")
   curl -s -X POST "${MM_URL}/api/v4/bots" \
-    -H "Authorization: Bearer ${MM_TOKEN}" \
+    -H "Authorization: Bearer ${KCHAT_TOKEN}" \
     -H "Content-Type: application/json" \
     -d "{\"username\":\"${slug}\",\"display_name\":\"${display_name}\",\"description\":\"${description}\"}" \
     >/dev/null 2>&1 || true
 
   # Get bot user ID
   BOT_USER_ID=$(curl -s "${MM_URL}/api/v4/users/username/${slug}" \
-    -H "Authorization: Bearer ${MM_TOKEN}" | jq -r '.id // empty')
+    -H "Authorization: Bearer ${KCHAT_TOKEN}" | jq -r '.id // empty')
 
   [ -z "$BOT_USER_ID" ] && { echo "  WARN: could not find ${slug}"; continue; }
 
   # Generate personal access token
   BOT_TOKEN=$(curl -s -X POST "${MM_URL}/api/v4/users/${BOT_USER_ID}/tokens" \
-    -H "Authorization: Bearer ${MM_TOKEN}" \
+    -H "Authorization: Bearer ${KCHAT_TOKEN}" \
     -H "Content-Type: application/json" \
     -d "{\"description\":\"${slug} puppet token\"}" | jq -r '.token // empty')
 
