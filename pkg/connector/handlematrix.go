@@ -64,13 +64,11 @@ func (m *KChatClient) HandleMatrixMessage(ctx context.Context, msg *bridgev2.Mat
 	// Post marshals a nil slice as null unless PreCommit normalizes it.
 	post.PreCommit()
 
-	// Register the transaction ID so bridgev2 drops the echo of this post,
-	// and tag the post with it as fallback if kChat keeps props.
-	// safeAddPendingToIgnore tolerates portals without initialized pending
-	// maps (only possible in unit tests).
+	// Register the transaction ID so bridgev2 drops the echo of this post
+	// if kChat preserves the mx_txn prop (kChat rejects props, so the
+	// in-memory echo tracker is the primary dedup mechanism).
 	txnID := networkid.TransactionID(msg.Event.ID.String())
 	safeAddPendingToIgnore(msg, txnID)
-	post.AddProp("mx_txn", string(txnID))
 
 	createdPost, err := rawCreatePost(ctx, postClient, post)
 	if err != nil {
