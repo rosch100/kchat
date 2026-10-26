@@ -12,8 +12,9 @@ displayname_template: "{{if .Nickname}}{{.Nickname}}{{else}}{{.Username}}{{end}}
 bot_prefix: ""
 
 # Listen address for the admin HTTP API (serves /api/reload-puppets).
-# Set to empty string to disable the admin API.
-admin_api_addr: ":29325"
+# Set to "" to disable the admin API (recommended for single-user setups);
+# "-" falls back to BRIDGE_API_ADDR, then the default port 29320.
+admin_api_addr: ""
 
 # Enable message backfill to populate channel history on first sync.
 backfill_enabled: false

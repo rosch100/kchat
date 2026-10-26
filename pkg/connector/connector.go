@@ -75,12 +75,14 @@ func (mc *KChatConnector) Start(ctx context.Context) error {
 	go mc.WatchNewPortals(ctx, 0)
 
 	// Start admin HTTP API for puppet hot-reload.
+	// Empty admin_api_addr explicitly disables the admin API (LLM/puppet
+	// hot-reload); "-" falls back to BRIDGE_API_ADDR, then the default port.
 	apiAddr := mc.Config.AdminAPIAddr
-	if apiAddr == "" {
+	if apiAddr == "-" {
 		apiAddr = os.Getenv("BRIDGE_API_ADDR")
-	}
-	if apiAddr == "" {
-		apiAddr = ":29320"
+		if apiAddr == "" {
+			apiAddr = ":29320"
+		}
 	}
 	if apiAddr != "" {
 		mux := http.NewServeMux()
