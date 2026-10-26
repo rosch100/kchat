@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: Documentation
-    url: https://github.com/aiku/matrix-kchat#readme
+    url: https://github.com/rosch100/kchat#readme
     about: Check the README for setup and configuration help
-  - name: Matrix Chat
-    url: https://matrix.to/#/#matrix-kchat:matrix.org
-    about: Ask questions in the Matrix room
+  - name: Beeper Self-Hosting
+    url: https://matrix.to/#/#self-hosting:beeper.com
+    about: Help with self-hosting bridges on Beeper
