@@ -9,7 +9,7 @@ RUN apk add --no-cache \
     musl-dev=1.2.6-r3 \
     cmake=4.2.3-r0 \
     make=4.4.1-r4 \
-    git=2.54.0-r0
+    git=2.54.1-r0
 
 # Build libolm as a static library
 RUN git init /tmp/olm && \
